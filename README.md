@@ -26,9 +26,11 @@ it more powerful:
 - **Aesthetics matter.** A strict matte-black design system: a full greyscale ramp plus a single
   red accent, no gradients, crisp hairlines.
 
-## Features (v1)
+## Features
 
-- **Live Claude Code terminal** — the real interactive TUI over a pty, with multi-session tabs.
+**Core cockpit**
+- **Live Claude Code terminal** — the real interactive TUI over a pty, with multi-session tabs that
+  all keep running in the background when you switch.
 - **Context & cost HUD** — token budget meter (grey → red as it fills) and a live `$` estimate,
   derived from `~/.claude/projects/**` transcripts.
 - **Files & Editor** — a project file tree with a Monaco editor; open, edit, and save (`Ctrl+S`).
@@ -37,6 +39,18 @@ it more powerful:
 - **Device preview** — an in-app browser framed as Desktop / iPhone / Android, with a QR code.
 - **Command palette** — `⌘/Ctrl+K` to jump between sessions and panels.
 - **Seamless onboarding** — first-run preflight checks for the `claude` CLI with plain-English fixes.
+
+**Agentic orchestration**
+- **Isolated parallel agents** — start a session on its own **git worktree** (new branch) so several
+  Claude agents can work at once without colliding on files.
+- **Agent board** — a live overview of every session: status (idle / working / needs-you), context %,
+  cost, and last activity; click to focus, or remove a worktree when done.
+- **Attention routing** — when an agent hits a permission/plan prompt, its tab and board card flag red
+  so you always know which one is waiting on you.
+- **Checkpoint & rewind** — one-click git snapshot before a risky run (`commit-tree`, no history
+  pollution) and instant rewind (`git restore`).
+- **Session compaction** — a button that runs `/compact` to prune context.
+- **Template gallery** — scaffold a starter (Vite React/Vue/Svelte, Next.js) and open a session in it.
 
 Panels dock beside the always-present terminal (Editor on the left; MCP and Preview on the right)
 and close with `X` to return Claude to fullscreen — the session never restarts when you open a panel.
@@ -94,9 +108,10 @@ Daedalus/
 │  └─ palette/           # ⌘K command palette
 ├─ src-tauri/            # Rust core
 │  ├─ src/pty/           # interactive `claude` over portable-pty
+│  ├─ src/git/           # worktrees, checkpoint/rewind, scaffold runner
 │  ├─ src/live_usage/    # token/cost from ~/.claude/projects transcripts
 │  ├─ src/files/         # project file read/write for the editor
-│  └─ src/commands/      # sessions, MCP, checkpoints (from the opcode base)
+│  └─ src/commands/      # sessions, MCP (from the opcode base)
 └─ DAEDALUS.md           # original design brief
 ```
 
@@ -110,8 +125,8 @@ everything else is greyscale, and there are no gradients** — elevation comes f
 
 - Public QR tunnel (cloudflared) so the device preview works off-network.
 - Auto-open the editor when Claude edits a file.
-- Multi-session board / worktree management, checkpoint & rewind UI.
-- Secrets vault and pre-commit secret scanning.
+- Commit graph + AI commit messages; secrets vault and pre-commit secret scanning.
+- Gamerish FX pass: film grain, reactive background, sound cues, session streak HUD.
 - macOS polish.
 
 ## License

@@ -5,6 +5,7 @@ mod checkpoint;
 mod claude_binary;
 mod commands;
 mod files;
+mod git;
 mod live_usage;
 mod process;
 mod pty;
@@ -48,6 +49,10 @@ use commands::usage::{
     get_session_stats, get_usage_by_date_range, get_usage_details, get_usage_stats,
 };
 use files::{list_dir, read_text_file, write_text_file};
+use git::{
+    git_checkpoint, git_create_worktree, git_current_branch, git_is_repo, git_list_worktrees,
+    git_remove_worktree, git_repo_root, git_rewind, run_scaffold,
+};
 use live_usage::get_live_session_usage;
 use process::ProcessRegistryState;
 use pty::{pty_kill, pty_resize, pty_spawn, pty_write, PtyState};
@@ -315,6 +320,16 @@ fn main() {
             list_dir,
             read_text_file,
             write_text_file,
+            // Git orchestration (worktrees, checkpoints, scaffolding)
+            git_is_repo,
+            git_repo_root,
+            git_current_branch,
+            git_create_worktree,
+            git_list_worktrees,
+            git_remove_worktree,
+            git_checkpoint,
+            git_rewind,
+            run_scaffold,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

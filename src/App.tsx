@@ -5,16 +5,19 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Rail } from "@/shell/Rail";
 import { TitleBar } from "@/shell/TitleBar";
 import { Dock } from "@/shell/Dock";
-import { SessionView } from "@/views/SessionView";
+import { SessionHost } from "@/shell/SessionHost";
 import { McpView } from "@/views/McpView";
 import { PreviewView } from "@/views/PreviewView";
 import { SettingsView } from "@/views/SettingsView";
+import { BoardView } from "@/views/BoardView";
+import { TemplatesView } from "@/views/TemplatesView";
 import { EditorPanel } from "@/editor/EditorPanel";
 import { ThemePreview } from "@/theme/ThemePreview";
 import { CommandPalette } from "@/palette/CommandPalette";
 import { Onboarding } from "@/onboarding/Onboarding";
 import { pickProjectFolder, basename } from "@/lib/project";
-import type { DockId, OverlayId, Session } from "@/lib/types";
+import { gitRepoRoot, gitCreateWorktree, gitRemoveWorktree } from "@/lib/git";
+import type { DockId, OverlayId, Session, SessionStatus } from "@/lib/types";
 import { useSessionStats } from "@/meter/useSessionStats";
 
 const ONBOARD_KEY = "daedalus.onboarded.v1";
@@ -38,13 +41,40 @@ export default function App() {
   const activeSession = sessions.find((s) => s.id === activeId) ?? null;
   const stats = useSessionStats(activeSession);
 
-  const newSession = useCallback(async () => {
-    const path = await pickProjectFolder();
-    if (!path) return;
-    const session: Session = { id: crypto.randomUUID(), title: basename(path), cwd: path };
+  const addSession = useCallback((session: Session) => {
     setSessions((prev) => [...prev, session]);
     setActiveId(session.id);
   }, []);
+
+  const newSession = useCallback(async () => {
+    const path = await pickProjectFolder();
+    if (!path) return;
+    addSession({ id: crypto.randomUUID(), title: basename(path), cwd: path });
+  }, [addSession]);
+
+  // New session on an isolated git worktree so parallel agents never collide.
+  const newIsolatedSession = useCallback(async () => {
+    const path = await pickProjectFolder();
+    if (!path) return;
+    const repo = await gitRepoRoot(path).catch(() => null);
+    if (!repo) {
+      // Not a git repo — fall back to a plain session.
+      addSession({ id: crypto.randomUUID(), title: basename(path), cwd: path });
+      return;
+    }
+    const branch = `agent-${Date.now().toString(36).slice(-5)}`;
+    try {
+      const worktreePath = await gitCreateWorktree(repo, branch);
+      addSession({
+        id: crypto.randomUUID(),
+        title: `${basename(repo)} · ${branch}`,
+        cwd: worktreePath,
+        worktree: { repoPath: repo, branch, path: worktreePath },
+      });
+    } catch {
+      addSession({ id: crypto.randomUUID(), title: basename(path), cwd: path });
+    }
+  }, [addSession]);
 
   const closeSession = useCallback((id: string) => {
     setSessions((prev) => {
@@ -52,6 +82,21 @@ export default function App() {
       setActiveId((cur) => (cur === id ? (next[next.length - 1]?.id ?? null) : cur));
       return next;
     });
+  }, []);
+
+  const removeWorktree = useCallback(
+    async (session: Session) => {
+      if (!session.worktree) return;
+      await gitRemoveWorktree(session.worktree.repoPath, session.worktree.path).catch(() => {});
+      closeSession(session.id);
+    },
+    [closeSession],
+  );
+
+  const setStatus = useCallback((id: string, status: SessionStatus) => {
+    setSessions((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, status, lastActivity: Date.now() } : s)),
+    );
   }, []);
 
   const toggleDock = useCallback((d: DockId) => {
@@ -63,15 +108,18 @@ export default function App() {
     setOverlay((cur) => (cur === o ? null : o));
   }, []);
 
+  const focusSession = useCallback((id: string) => {
+    setActiveId(id);
+    setOverlay(null);
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setPaletteOpen((o) => !o);
       }
-      if (e.key === "Escape") {
-        setOverlay(null);
-      }
+      if (e.key === "Escape") setOverlay(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -106,7 +154,6 @@ export default function App() {
         <div className="flex min-h-0 flex-1">
           <Rail dock={dock} onToggleDock={toggleDock} overlay={overlay} onToggleOverlay={toggleOverlay} />
 
-          {/* Main area: terminal stays mounted (stable keys); editor docks left, MCP/Preview right */}
           <div className="relative min-w-0 flex-1">
             <div className="flex h-full">
               {dock === "editor" && (
@@ -124,7 +171,7 @@ export default function App() {
               )}
 
               <div key="main" className="min-w-0 flex-1">
-                <SessionView session={activeSession} onNew={newSession} />
+                <SessionHost sessions={sessions} activeId={activeId} onNew={newSession} onStatus={setStatus} />
               </div>
 
               {(dock === "mcp" || dock === "preview") && (
@@ -151,6 +198,25 @@ export default function App() {
                   </IconButton>
                 </div>
                 <div className="h-[calc(100%-2.25rem)]">
+                  {overlay === "board" && (
+                    <BoardView
+                      sessions={sessions}
+                      activeId={activeId}
+                      onFocus={focusSession}
+                      onNew={newSession}
+                      onNewIsolated={newIsolatedSession}
+                      onRemoveWorktree={removeWorktree}
+                      onClose={closeSession}
+                    />
+                  )}
+                  {overlay === "templates" && (
+                    <TemplatesView
+                      onScaffolded={(s) => {
+                        addSession(s);
+                        setOverlay(null);
+                      }}
+                    />
+                  )}
                   {overlay === "settings" && <SettingsView />}
                   {overlay === "theme" && <ThemePreview />}
                 </div>

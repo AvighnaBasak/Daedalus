@@ -1,4 +1,12 @@
-import { FileCode, Boxes, MonitorSmartphone, Settings, Palette } from "lucide-react";
+import {
+  LayoutGrid,
+  FileCode,
+  Boxes,
+  MonitorSmartphone,
+  LayoutTemplate,
+  Settings,
+  Palette,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Tooltip } from "@/components/ui/Tooltip";
 import type { DockId, OverlayId } from "@/lib/types";
@@ -23,11 +31,18 @@ export function Rail({
   return (
     <nav className="flex w-14 shrink-0 flex-col items-center border-r border-border bg-bg py-2">
       <div className="flex flex-1 flex-col items-center gap-1">
+        <RailItem active={overlay === "board"} label="Board" onClick={() => onToggleOverlay("board")}>
+          <LayoutGrid size={18} />
+        </RailItem>
+        <div className="my-1 h-px w-6 bg-border" />
         {DOCKS.map(({ id, icon: Icon, label }) => (
           <RailItem key={id} active={dock === id} label={label} onClick={() => onToggleDock(id)}>
             <Icon size={18} />
           </RailItem>
         ))}
+        <RailItem active={overlay === "templates"} label="Templates" onClick={() => onToggleOverlay("templates")}>
+          <LayoutTemplate size={18} />
+        </RailItem>
       </div>
       <div className="flex flex-col items-center gap-1">
         <RailItem active={overlay === "theme"} label="Theme preview" onClick={() => onToggleOverlay("theme")}>

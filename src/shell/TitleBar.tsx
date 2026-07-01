@@ -49,7 +49,10 @@ export function TitleBar({
                   : "border-transparent text-text-muted hover:bg-overlay hover:text-text",
               )}
             >
-              <StatusDot tone={s.needsAttention ? "alert" : active ? "busy" : "idle"} pulse={s.needsAttention} />
+              <StatusDot
+                tone={s.status === "attention" ? "alert" : s.status === "working" ? "busy" : active ? "busy" : "idle"}
+                pulse={s.status === "attention"}
+              />
               <span className="truncate">{s.title}</span>
               <button
                 onClick={(e) => {
