@@ -1,0 +1,70 @@
+/*
+ * Daedalus design tokens — single source of truth.
+ * RULE: the only chroma in the entire app is red. Everything else is greyscale.
+ * No gradients anywhere — flat fills only; elevation via surface-step + 1px hairline.
+ */
+
+:root {
+  /* ---- primitives: greyscale ---- */
+  --black: #0a0a0a; /* app background (matte, not pure #000) */
+  --grey-950: #0e0e0e;
+  --grey-900: #121212; /* surface */
+  --grey-850: #161616; /* surface raised (panels, cards) */
+  --grey-800: #1c1c1c; /* overlay / popover / palette */
+  --grey-700: #262626; /* hairline border (default) */
+  --grey-600: #2e2e2e; /* border strong / active divider */
+  --grey-500: #3d3d3d; /* hover divider */
+  --grey-400: #5a5a5a; /* disabled text / icon */
+  --grey-300: #6e6e6e; /* muted text */
+  --grey-200: #8a8a8a; /* secondary text */
+  --grey-100: #b4b4b4; /* tertiary text */
+  --grey-050: #e6e6e6; /* primary text */
+  --white: #f5f5f5; /* emphasis text */
+
+  /* ---- primitives: the single accent ---- */
+  --red: #e5484d;
+  --red-hi: #ff5c61; /* hover / bright */
+  --red-mid: #c23438; /* pressed / active */
+  --red-lo: #7a2225; /* deep danger fill */
+  --red-dim: rgba(229, 72, 77, 0.12); /* selected / focus tint */
+
+  /* ---- semantic (what components reference) ---- */
+  --bg: var(--black);
+  --surface: var(--grey-900);
+  --surface-raised: var(--grey-850);
+  --overlay: var(--grey-800);
+  --border: var(--grey-700);
+  --border-strong: var(--grey-600);
+  --border-hover: var(--grey-500);
+  --text: var(--grey-050);
+  --text-emphasis: var(--white);
+  --text-muted: var(--grey-300);
+  --text-secondary: var(--grey-200);
+  --text-disabled: var(--grey-400);
+  --accent: var(--red);
+  --accent-hover: var(--red-hi);
+  --accent-press: var(--red-mid);
+  --focus-ring: var(--red);
+  --selection: var(--red-dim);
+  --danger: var(--red);
+
+  /* ---- radii (crisp / editorial — no pill shapes) ---- */
+  --r-0: 0px;
+  --r-1: 2px;
+  --r-2: 4px;
+  --r-3: 6px;
+
+  /* ---- typography ---- */
+  --font-sans: "Geist", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", "SFMono-Regular", Consolas,
+    "Liberation Mono", monospace;
+
+  /* ---- motion ---- */
+  --dur-fast: 120ms;
+  --dur-base: 160ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+::selection {
+  background: var(--selection);
+}

@@ -1,0 +1,54 @@
+import type { editor } from "monaco-editor";
+
+/**
+ * daedalus-noir — Monaco theme obeying the greyscale + red rule. Syntax lives on
+ * a calm grey ramp so red only ever means "look here" (keywords emphasis / errors).
+ */
+export const daedalusNoir: editor.IStandaloneThemeData = {
+  base: "vs-dark",
+  inherit: true,
+  rules: [
+    { token: "", foreground: "c8c8c8" },
+    { token: "comment", foreground: "5a5a5a", fontStyle: "italic" },
+    { token: "keyword", foreground: "f5f5f5", fontStyle: "bold" },
+    { token: "keyword.control", foreground: "ff5c61" },
+    { token: "operator", foreground: "8a8a8a" },
+    { token: "number", foreground: "b4b4b4" },
+    { token: "string", foreground: "9a9a9a" },
+    { token: "type", foreground: "e6e6e6" },
+    { token: "type.identifier", foreground: "e6e6e6" },
+    { token: "function", foreground: "ededed" },
+    { token: "variable", foreground: "c8c8c8" },
+    { token: "variable.predefined", foreground: "e6e6e6" },
+    { token: "constant", foreground: "e6e6e6" },
+    { token: "tag", foreground: "e5484d" },
+    { token: "attribute.name", foreground: "b4b4b4" },
+    { token: "delimiter", foreground: "6e6e6e" },
+    { token: "invalid", foreground: "ff5c61" },
+  ],
+  colors: {
+    "editor.background": "#121212",
+    "editor.foreground": "#c8c8c8",
+    "editorLineNumber.foreground": "#3d3d3d",
+    "editorLineNumber.activeForeground": "#8a8a8a",
+    "editorCursor.foreground": "#e5484d",
+    "editor.selectionBackground": "#e5484d33",
+    "editor.inactiveSelectionBackground": "#e5484d1f",
+    "editor.lineHighlightBackground": "#161616",
+    "editor.lineHighlightBorder": "#00000000",
+    "editorIndentGuide.background1": "#1c1c1c",
+    "editorIndentGuide.activeBackground1": "#2e2e2e",
+    "editorWhitespace.foreground": "#1c1c1c",
+    "editorGutter.background": "#121212",
+    "editorWidget.background": "#161616",
+    "editorWidget.border": "#262626",
+    "editorHoverWidget.background": "#1c1c1c",
+    "editorHoverWidget.border": "#262626",
+    "editor.findMatchBackground": "#e5484d55",
+    "editor.findMatchHighlightBackground": "#e5484d22",
+    "scrollbarSlider.background": "#26262699",
+    "scrollbarSlider.hoverBackground": "#3d3d3d",
+    "scrollbarSlider.activeBackground": "#5a5a5a",
+    focusBorder: "#e5484d",
+  },
+};
