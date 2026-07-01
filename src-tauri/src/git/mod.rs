@@ -134,6 +134,212 @@ pub fn git_rewind(cwd: String, sha: String) -> Result<String, String> {
     Ok("Restored tracked files to the checkpoint. Files created since then were left in place.".into())
 }
 
+#[derive(Serialize)]
+pub struct FileChange {
+    pub path: String,
+    /// added | modified | deleted | renamed | untracked
+    pub status: String,
+}
+
+/// Working-tree changes vs HEAD (porcelain), including untracked files.
+#[tauri::command]
+pub fn git_status(cwd: String) -> Result<Vec<FileChange>, String> {
+    let out = git(&cwd, &["status", "--porcelain=v1", "--untracked-files=all"])?;
+    let mut changes = Vec::new();
+    for line in out.lines() {
+        if line.len() < 3 {
+            continue;
+        }
+        let code = &line[..2];
+        let rest = line[3..].to_string();
+        let (path, status) = if code == "??" {
+            (rest, "untracked")
+        } else if code.contains('R') {
+            // "old -> new"
+            let new = rest.split(" -> ").last().unwrap_or(&rest).to_string();
+            (new, "renamed")
+        } else if code.contains('D') {
+            (rest, "deleted")
+        } else if code.contains('A') {
+            (rest, "added")
+        } else {
+            (rest, "modified")
+        };
+        changes.push(FileChange { path, status: status.to_string() });
+    }
+    Ok(changes)
+}
+
+/// The HEAD version of a file (empty string if the file is new / not in HEAD).
+#[tauri::command]
+pub fn git_show_head(cwd: String, path: String) -> Result<String, String> {
+    Ok(git(&cwd, &["show", &format!("HEAD:{path}")]).unwrap_or_default())
+}
+
+/// Full tracked diff vs HEAD (used for commit messages and secret scanning).
+#[tauri::command]
+pub fn git_diff(cwd: String) -> Result<String, String> {
+    git(&cwd, &["diff", "HEAD"])
+}
+
+#[derive(Serialize)]
+pub struct Commit {
+    pub hash: String,
+    pub short: String,
+    pub parents: Vec<String>,
+    pub refs: String,
+    pub subject: String,
+    pub author: String,
+    pub date: String,
+}
+
+/// Recent commits for the graph view.
+#[tauri::command]
+pub fn git_log(cwd: String, limit: u32) -> Result<Vec<Commit>, String> {
+    let fmt = "%H%x1f%h%x1f%P%x1f%D%x1f%s%x1f%an%x1f%ar";
+    let out = git(
+        &cwd,
+        &["log", &format!("-n{limit}"), &format!("--pretty=format:{fmt}")],
+    )?;
+    let mut commits = Vec::new();
+    for line in out.lines() {
+        let f: Vec<&str> = line.split('\u{1f}').collect();
+        if f.len() < 7 {
+            continue;
+        }
+        commits.push(Commit {
+            hash: f[0].to_string(),
+            short: f[1].to_string(),
+            parents: f[2].split_whitespace().map(String::from).collect(),
+            refs: f[3].to_string(),
+            subject: f[4].to_string(),
+            author: f[5].to_string(),
+            date: f[6].to_string(),
+        });
+    }
+    Ok(commits)
+}
+
+/// Stage everything and commit.
+#[tauri::command]
+pub fn git_commit(cwd: String, message: String) -> Result<String, String> {
+    git(&cwd, &["add", "-A"])?;
+    git(&cwd, &["commit", "-m", &message])
+}
+
+#[derive(Serialize)]
+pub struct SecretFinding {
+    pub file: String,
+    pub rule: String,
+    pub preview: String,
+}
+
+/// Lightweight built-in secret scan (gitleaks-style rules) over the pending diff
+/// and untracked files — run before committing.
+#[tauri::command]
+pub fn scan_secrets(cwd: String) -> Result<Vec<SecretFinding>, String> {
+    use regex::Regex;
+    let rules: Vec<(&str, Regex)> = vec![
+        ("AWS access key", Regex::new(r"AKIA[0-9A-Z]{16}").unwrap()),
+        ("Private key", Regex::new(r"-----BEGIN [A-Z ]*PRIVATE KEY-----").unwrap()),
+        ("GitHub token", Regex::new(r"gh[pousr]_[A-Za-z0-9]{20,}").unwrap()),
+        ("Slack token", Regex::new(r"xox[baprs]-[0-9A-Za-z-]{10,}").unwrap()),
+        ("Google API key", Regex::new(r"AIza[0-9A-Za-z_\-]{35}").unwrap()),
+        (
+            "Generic secret",
+            Regex::new(r#"(?i)(api[_-]?key|secret|token|password|passwd|access[_-]?token)\s*[:=]\s*['"]?[A-Za-z0-9_\-]{16,}"#).unwrap(),
+        ),
+    ];
+
+    let mut findings = Vec::new();
+    let mut scan = |file: &str, text: &str| {
+        for line in text.lines() {
+            let l = line.trim();
+            for (rule, re) in &rules {
+                if re.is_match(l) {
+                    let preview = if l.len() > 80 { format!("{}…", &l[..80]) } else { l.to_string() };
+                    findings.push(SecretFinding {
+                        file: file.to_string(),
+                        rule: rule.to_string(),
+                        preview,
+                    });
+                    break;
+                }
+            }
+        }
+    };
+
+    // Added lines in the tracked diff.
+    if let Ok(diff) = git(&cwd, &["diff", "HEAD"]) {
+        let mut current = String::new();
+        for line in diff.lines() {
+            if let Some(p) = line.strip_prefix("+++ b/") {
+                current = p.to_string();
+            } else if let Some(added) = line.strip_prefix('+') {
+                if !line.starts_with("+++") {
+                    scan(&current, added);
+                }
+            }
+        }
+    }
+    // Untracked files (the classic place a stray .env with keys hides).
+    if let Ok(status) = git_status(cwd.clone()) {
+        for c in status.into_iter().filter(|c| c.status == "untracked") {
+            let full = std::path::Path::new(&cwd).join(&c.path);
+            if let Ok(content) = std::fs::read_to_string(&full) {
+                scan(&c.path, &content);
+            }
+        }
+    }
+    Ok(findings)
+}
+
+/// Generate a commit message from the pending diff using the `claude` CLI
+/// (headless `-p`), so it runs on the user's subscription — no extra API cost.
+#[tauri::command]
+pub async fn generate_commit_message(app: tauri::AppHandle, cwd: String) -> Result<String, String> {
+    use tokio::io::AsyncWriteExt;
+    use tokio::process::Command as TokioCommand;
+
+    let diff = git(&cwd, &["diff", "HEAD"])?;
+    if diff.trim().is_empty() {
+        return Err("No changes to describe. Stage or make edits first.".into());
+    }
+    let diff: String = diff.chars().take(8000).collect();
+    let claude = crate::claude_binary::find_claude_binary(&app)?;
+    let instruction =
+        "Write a concise conventional git commit message for the diff provided on standard input. Reply with only the commit message, no preamble or backticks.";
+
+    let lower = claude.to_lowercase();
+    let mut cmd = if cfg!(windows) && (lower.ends_with(".cmd") || lower.ends_with(".bat")) {
+        let mut c = TokioCommand::new("cmd");
+        c.arg("/c").arg(&claude);
+        c
+    } else {
+        TokioCommand::new(&claude)
+    };
+    cmd.arg("-p").arg(instruction);
+    cmd.current_dir(&cwd);
+    cmd.stdin(std::process::Stdio::piped());
+    cmd.stdout(std::process::Stdio::piped());
+    cmd.stderr(std::process::Stdio::piped());
+
+    let mut child = cmd.spawn().map_err(|e| format!("Failed to run claude: {e}"))?;
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(diff.as_bytes()).await;
+        drop(stdin);
+    }
+    let out = child
+        .wait_with_output()
+        .await
+        .map_err(|e| format!("claude failed: {e}"))?;
+    if out.status.success() {
+        Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+    } else {
+        Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
+    }
+}
+
 /// Run a project scaffold command (async so it never blocks the UI). On Windows,
 /// npm/npx are `.cmd` shims and must be invoked through cmd.exe.
 #[tauri::command]

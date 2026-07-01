@@ -1,5 +1,5 @@
 import { Command } from "cmdk";
-import { FolderOpen, Boxes, MonitorSmartphone, Settings, Palette, TerminalSquare, FileCode } from "lucide-react";
+import { FolderOpen, Boxes, MonitorSmartphone, Settings, Palette, TerminalSquare, FileCode, GitCompare } from "lucide-react";
 import type { DockId, OverlayId, Session } from "@/lib/types";
 
 export function CommandPalette({
@@ -64,6 +64,7 @@ export function CommandPalette({
 
         <Command.Group heading="Open panel" className="[&_[cmdk-group-heading]]:mono-label [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5">
           <Item onSelect={() => run(() => onOpenDock("editor"))} icon={<FileCode size={15} />}>Files & Editor</Item>
+          <Item onSelect={() => run(() => onOpenDock("git"))} icon={<GitCompare size={15} />}>Git · Diff & History</Item>
           <Item onSelect={() => run(() => onOpenDock("mcp"))} icon={<Boxes size={15} />}>MCP Hub</Item>
           <Item onSelect={() => run(() => onOpenDock("preview"))} icon={<MonitorSmartphone size={15} />}>Preview</Item>
           <Item onSelect={() => run(() => onOpenOverlay("theme"))} icon={<Palette size={15} />}>Theme preview</Item>

@@ -52,6 +52,14 @@ it more powerful:
 - **Session compaction** — a button that runs `/compact` to prune context.
 - **Template gallery** — scaffold a starter (Vite React/Vue/Svelte, Next.js) and open a session in it.
 
+**Git & diff visibility**
+- **Live diff viewer** — see exactly what Claude changed per file in a themed Monaco diff (additions
+  grey, removals red), plus a commit-graph **History** tab.
+- **AI commit messages** — generate a commit message from the working diff via the `claude` CLI
+  (runs on your subscription, no extra API cost).
+- **Secret-scan before commit** — a built-in gitleaks-style scanner flags likely keys/tokens in your
+  changes (and untracked files) before you commit.
+
 Panels dock beside the always-present terminal (Editor on the left; MCP and Preview on the right)
 and close with `X` to return Claude to fullscreen — the session never restarts when you open a panel.
 

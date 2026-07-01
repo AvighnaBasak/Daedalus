@@ -1,6 +1,7 @@
 import {
   LayoutGrid,
   FileCode,
+  GitCompare,
   Boxes,
   MonitorSmartphone,
   LayoutTemplate,
@@ -13,6 +14,7 @@ import type { DockId, OverlayId } from "@/lib/types";
 
 const DOCKS: { id: DockId; icon: typeof Boxes; label: string }[] = [
   { id: "editor", icon: FileCode, label: "Files & Editor" },
+  { id: "git", icon: GitCompare, label: "Git · Diff & History" },
   { id: "mcp", icon: Boxes, label: "MCP Hub" },
   { id: "preview", icon: MonitorSmartphone, label: "Preview" },
 ];

@@ -50,5 +50,15 @@ export const daedalusNoir: editor.IStandaloneThemeData = {
     "scrollbarSlider.hoverBackground": "#3d3d3d",
     "scrollbarSlider.activeBackground": "#5a5a5a",
     focusBorder: "#e5484d",
+    // Diff: additions on the grey ramp, removals in red (palette rule).
+    "diffEditor.insertedTextBackground": "#8a8a8a24",
+    "diffEditor.removedTextBackground": "#e5484d2e",
+    "diffEditor.insertedLineBackground": "#8a8a8a14",
+    "diffEditor.removedLineBackground": "#e5484d14",
+    "diffEditor.border": "#262626",
+    "diffEditorGutter.insertedLineBackground": "#8a8a8a1f",
+    "diffEditorGutter.removedLineBackground": "#e5484d1f",
+    "diffEditorOverview.insertedForeground": "#8a8a8a",
+    "diffEditorOverview.removedForeground": "#e5484d",
   },
 };

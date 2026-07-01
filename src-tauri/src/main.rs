@@ -50,8 +50,9 @@ use commands::usage::{
 };
 use files::{list_dir, read_text_file, write_text_file};
 use git::{
-    git_checkpoint, git_create_worktree, git_current_branch, git_is_repo, git_list_worktrees,
-    git_remove_worktree, git_repo_root, git_rewind, run_scaffold,
+    generate_commit_message, git_checkpoint, git_commit, git_create_worktree, git_current_branch,
+    git_diff, git_is_repo, git_list_worktrees, git_log, git_remove_worktree, git_repo_root,
+    git_rewind, git_show_head, git_status, run_scaffold, scan_secrets,
 };
 use live_usage::get_live_session_usage;
 use process::ProcessRegistryState;
@@ -330,6 +331,13 @@ fn main() {
             git_checkpoint,
             git_rewind,
             run_scaffold,
+            git_status,
+            git_show_head,
+            git_diff,
+            git_log,
+            git_commit,
+            scan_secrets,
+            generate_commit_message,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

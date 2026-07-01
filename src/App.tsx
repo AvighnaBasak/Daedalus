@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { FileCode, Boxes, MonitorSmartphone, X } from "lucide-react";
+import { FileCode, GitCompare, Boxes, MonitorSmartphone, X } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/Tooltip";
 import { IconButton } from "@/components/ui/IconButton";
 import { Rail } from "@/shell/Rail";
@@ -12,6 +12,7 @@ import { SettingsView } from "@/views/SettingsView";
 import { BoardView } from "@/views/BoardView";
 import { TemplatesView } from "@/views/TemplatesView";
 import { EditorPanel } from "@/editor/EditorPanel";
+import { GitPanel } from "@/views/GitPanel";
 import { ThemePreview } from "@/theme/ThemePreview";
 import { CommandPalette } from "@/palette/CommandPalette";
 import { Onboarding } from "@/onboarding/Onboarding";
@@ -24,6 +25,7 @@ const ONBOARD_KEY = "daedalus.onboarded.v1";
 
 const DOCK_META: Record<DockId, { title: string; icon: ReactNode }> = {
   editor: { title: "Files & Editor", icon: <FileCode size={13} /> },
+  git: { title: "Git · Diff & History", icon: <GitCompare size={13} /> },
   mcp: { title: "MCP Hub", icon: <Boxes size={13} /> },
   preview: { title: "Preview", icon: <MonitorSmartphone size={13} /> },
 };
@@ -174,7 +176,7 @@ export default function App() {
                 <SessionHost sessions={sessions} activeId={activeId} onNew={newSession} onStatus={setStatus} />
               </div>
 
-              {(dock === "mcp" || dock === "preview") && (
+              {(dock === "git" || dock === "mcp" || dock === "preview") && (
                 <Dock
                   key="rightdock"
                   side="right"
@@ -184,6 +186,7 @@ export default function App() {
                   onWidthChange={setRightWidth}
                   onClose={() => setDock(null)}
                 >
+                  {dock === "git" && <GitPanel session={activeSession} />}
                   {dock === "mcp" && <McpView session={activeSession} />}
                   {dock === "preview" && <PreviewView />}
                 </Dock>

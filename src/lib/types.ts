@@ -1,5 +1,5 @@
 /** Right-side dock panels (open beside the always-mounted terminal). */
-export type DockId = "editor" | "mcp" | "preview";
+export type DockId = "editor" | "git" | "mcp" | "preview";
 /** Full-screen config overlays (rendered over the terminal, which stays mounted). */
 export type OverlayId = "settings" | "theme" | "board" | "templates";
 
