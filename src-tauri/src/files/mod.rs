@@ -54,3 +54,79 @@ pub fn read_text_file(path: String) -> Result<String, String> {
 pub fn write_text_file(path: String, content: String) -> Result<(), String> {
     fs::write(&path, content).map_err(|e| e.to_string())
 }
+
+/// Heavy directories Claude should not waste context reading.
+const LEAN_DENY: &[&str] = &[
+    "Read(./node_modules/**)",
+    "Read(./dist/**)",
+    "Read(./build/**)",
+    "Read(./.next/**)",
+    "Read(./target/**)",
+    "Read(./coverage/**)",
+    "Read(./.venv/**)",
+    "Read(./__pycache__/**)",
+    "Read(./vendor/**)",
+    "Read(./package-lock.json)",
+    "Read(./*.lock)",
+];
+
+fn lean_settings_path(cwd: &str) -> std::path::PathBuf {
+    std::path::Path::new(cwd).join(".claude").join("settings.local.json")
+}
+
+/// Whether lean-context deny rules are currently applied for this project.
+#[tauri::command]
+pub fn get_lean_context(cwd: String) -> bool {
+    let file = lean_settings_path(&cwd);
+    let Ok(text) = fs::read_to_string(&file) else {
+        return false;
+    };
+    let Ok(root) = serde_json::from_str::<serde_json::Value>(&text) else {
+        return false;
+    };
+    let deny = root["permissions"]["deny"].as_array();
+    match deny {
+        Some(arr) => {
+            let present: Vec<&str> = arr.iter().filter_map(|v| v.as_str()).collect();
+            LEAN_DENY.iter().all(|r| present.contains(r))
+        }
+        None => false,
+    }
+}
+
+/// Toggle lean-context deny rules in `.claude/settings.local.json` (merged
+/// non-destructively with any existing permissions).
+#[tauri::command]
+pub fn set_lean_context(cwd: String, enable: bool) -> Result<(), String> {
+    let file = lean_settings_path(&cwd);
+    let mut root: serde_json::Value = fs::read_to_string(&file)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_else(|| serde_json::json!({}));
+    if !root.is_object() {
+        root = serde_json::json!({});
+    }
+    let obj = root.as_object_mut().unwrap();
+    let perms = obj
+        .entry("permissions")
+        .or_insert_with(|| serde_json::json!({}));
+    let perms_obj = perms
+        .as_object_mut()
+        .ok_or("permissions is not an object")?;
+    let deny = perms_obj
+        .entry("deny")
+        .or_insert_with(|| serde_json::json!([]));
+    let arr = deny.as_array_mut().ok_or("deny is not an array")?;
+    // Remove any of our rules first, then re-add if enabling.
+    arr.retain(|v| v.as_str().map(|s| !LEAN_DENY.contains(&s)).unwrap_or(true));
+    if enable {
+        for r in LEAN_DENY {
+            arr.push(serde_json::json!(r));
+        }
+    }
+    if let Some(parent) = file.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let pretty = serde_json::to_string_pretty(&root).map_err(|e| e.to_string())?;
+    fs::write(&file, pretty).map_err(|e| e.to_string())
+}

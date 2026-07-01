@@ -9,6 +9,8 @@ pub mod git;
 pub mod live_usage;
 pub mod process;
 pub mod pty;
+pub mod tunnel;
+pub mod watch;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

@@ -3,6 +3,7 @@ import { Terminal } from "@/terminal/Terminal";
 import { Button } from "@/components/ui/Button";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { CheckpointMenu } from "./CheckpointMenu";
+import { ModelMenu } from "./ModelMenu";
 import { invoke, isTauri } from "@/lib/tauri";
 import { cn } from "@/lib/cn";
 import type { Session, SessionStatus } from "@/lib/types";
@@ -44,6 +45,7 @@ export function SessionHost({
         <span className="ml-1 truncate text-[11px] text-text-disabled">{active?.cwd}</span>
 
         <div className="ml-auto flex items-center gap-1.5">
+          {active && <ModelMenu sessionId={active.id} />}
           {active && <CheckpointMenu session={active} />}
           <Tooltip content="Summarize & prune context (/compact)" side="bottom">
             <Button size="sm" variant="ghost" onClick={compact} disabled={!active}>

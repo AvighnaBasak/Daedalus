@@ -11,6 +11,7 @@ import { PreviewView } from "@/views/PreviewView";
 import { SettingsView } from "@/views/SettingsView";
 import { BoardView } from "@/views/BoardView";
 import { TemplatesView } from "@/views/TemplatesView";
+import { CostView } from "@/views/CostView";
 import { EditorPanel } from "@/editor/EditorPanel";
 import { GitPanel } from "@/views/GitPanel";
 import { ThemePreview } from "@/theme/ThemePreview";
@@ -188,7 +189,7 @@ export default function App() {
                 >
                   {dock === "git" && <GitPanel session={activeSession} />}
                   {dock === "mcp" && <McpView session={activeSession} />}
-                  {dock === "preview" && <PreviewView />}
+                  {dock === "preview" && <PreviewView session={activeSession} />}
                 </Dock>
               )}
             </div>
@@ -220,7 +221,8 @@ export default function App() {
                       }}
                     />
                   )}
-                  {overlay === "settings" && <SettingsView />}
+                  {overlay === "cost" && <CostView />}
+                  {overlay === "settings" && <SettingsView session={activeSession} />}
                   {overlay === "theme" && <ThemePreview />}
                 </div>
               </div>

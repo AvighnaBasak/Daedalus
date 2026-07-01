@@ -1,14 +1,33 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { invoke, isTauri } from "@/lib/tauri";
+import { getLeanContext, setLeanContext } from "@/lib/features";
+import type { Session } from "@/lib/types";
 
 interface ClaudeVersion {
   is_installed?: boolean;
   version?: string;
 }
 
-export function SettingsView() {
+export function SettingsView({ session }: { session: Session | null }) {
   const [version, setVersion] = useState<string>("checking…");
+  const [lean, setLean] = useState(false);
+
+  useEffect(() => {
+    if (session && isTauri()) getLeanContext(session.cwd).then(setLean).catch(() => setLean(false));
+    else setLean(false);
+  }, [session]);
+
+  const toggleLean = async () => {
+    if (!session) return;
+    const next = !lean;
+    setLean(next);
+    try {
+      await setLeanContext(session.cwd, next);
+    } catch {
+      setLean(!next);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -34,6 +53,36 @@ export function SettingsView() {
         <div className="mt-6 flex flex-col gap-3">
           <Field label="Claude Code" value={version} />
           <Field label="Daedalus" value="v0.1.0 · AGPL-3.0" />
+        </div>
+
+        <div className="mt-8">
+          <h2 className="mono-label mb-3">Lean context</h2>
+          <div className="flex items-center justify-between rounded-[var(--r-2)] border border-border bg-surface px-4 py-3">
+            <div className="min-w-0 pr-4">
+              <p className="text-[13px] text-text">Keep Claude out of heavy directories</p>
+              <p className="mt-0.5 text-[12px] text-text-muted">
+                {session
+                  ? "Denies Read on node_modules, dist, build, target, lockfiles… via .claude/settings.local.json."
+                  : "Open a session to configure its context."}
+              </p>
+            </div>
+            <button
+              disabled={!session}
+              onClick={toggleLean}
+              aria-pressed={lean}
+              className={
+                "relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-40 " +
+                (lean ? "bg-accent" : "bg-grey-600")
+              }
+            >
+              <span
+                className={
+                  "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all " +
+                  (lean ? "left-[18px]" : "left-0.5")
+                }
+              />
+            </button>
+          </div>
         </div>
 
         <div className="mt-8">

@@ -5,6 +5,7 @@ import {
   Boxes,
   MonitorSmartphone,
   LayoutTemplate,
+  BarChart3,
   Settings,
   Palette,
 } from "lucide-react";
@@ -44,6 +45,9 @@ export function Rail({
         ))}
         <RailItem active={overlay === "templates"} label="Templates" onClick={() => onToggleOverlay("templates")}>
           <LayoutTemplate size={18} />
+        </RailItem>
+        <RailItem active={overlay === "cost"} label="Cost history" onClick={() => onToggleOverlay("cost")}>
+          <BarChart3 size={18} />
         </RailItem>
       </div>
       <div className="flex flex-col items-center gap-1">

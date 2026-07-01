@@ -60,6 +60,16 @@ it more powerful:
 - **Secret-scan before commit** — a built-in gitleaks-style scanner flags likely keys/tokens in your
   changes (and untracked files) before you commit.
 
+**Token efficiency**
+- **Model switcher** — one click to switch the live session between Opus / Sonnet / Haiku (`/model`).
+- **Cost history** — a cross-project leaderboard of tokens and `$` spent, from `~/.claude` transcripts.
+- **Lean context** — deny Claude read access to heavy dirs (node_modules, dist, target, lockfiles…)
+  via `.claude/settings.local.json`, so it stops wasting context on them.
+
+**Preview power**
+- **Public tunnel + QR** — expose the local dev server via ngrok and scan the QR from any network.
+- **Multi-tab preview** and **auto-reload on save** (a file watcher refreshes the in-app browser).
+
 Panels dock beside the always-present terminal (Editor on the left; MCP and Preview on the right)
 and close with `X` to return Claude to fullscreen — the session never restarts when you open a panel.
 

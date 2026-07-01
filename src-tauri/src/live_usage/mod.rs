@@ -122,3 +122,112 @@ pub fn get_live_session_usage(cwd: String) -> Result<LiveUsage, String> {
         model,
     })
 }
+
+#[derive(Serialize)]
+pub struct ProjectCost {
+    pub project: String,
+    pub cost_usd: f64,
+    pub total_tokens: u64,
+    pub sessions: u32,
+    pub last_active_ms: u64,
+}
+
+/// Sum cost + tokens across every turn in one transcript, and capture its cwd.
+fn accumulate_file(path: &std::path::Path) -> (f64, u64, Option<String>) {
+    let content = match fs::read_to_string(path) {
+        Ok(c) => c,
+        Err(_) => return (0.0, 0, None),
+    };
+    let mut cost = 0.0f64;
+    let mut tokens = 0u64;
+    let mut cwd: Option<String> = None;
+    let mut model = String::from("sonnet");
+    for line in content.lines() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let v: serde_json::Value = match serde_json::from_str(line) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        if cwd.is_none() {
+            if let Some(c) = v["cwd"].as_str() {
+                cwd = Some(c.to_string());
+            }
+        }
+        let usage = &v["message"]["usage"];
+        if !usage.is_object() {
+            continue;
+        }
+        if let Some(m) = v["message"]["model"].as_str() {
+            model = m.to_string();
+        }
+        let input = usage["input_tokens"].as_u64().unwrap_or(0);
+        let output = usage["output_tokens"].as_u64().unwrap_or(0);
+        let cw = usage["cache_creation_input_tokens"].as_u64().unwrap_or(0);
+        let cr = usage["cache_read_input_tokens"].as_u64().unwrap_or(0);
+        let (ip, op, cwp, crp) = price_for(&model);
+        cost += input as f64 * ip + output as f64 * op + cw as f64 * cwp + cr as f64 * crp;
+        tokens += input + output + cw + cr;
+    }
+    (cost, tokens, cwd)
+}
+
+/// Aggregate token/cost usage per project across all of `~/.claude/projects`.
+#[tauri::command]
+pub fn get_cost_history() -> Result<Vec<ProjectCost>, String> {
+    let home = match dirs::home_dir() {
+        Some(h) => h,
+        None => return Ok(vec![]),
+    };
+    let root = home.join(".claude").join("projects");
+    let mut out = Vec::new();
+    let entries = match fs::read_dir(&root) {
+        Ok(e) => e,
+        Err(_) => return Ok(vec![]),
+    };
+    for project_dir in entries.flatten() {
+        if !project_dir.path().is_dir() {
+            continue;
+        }
+        let mut cost = 0.0f64;
+        let mut tokens = 0u64;
+        let mut sessions = 0u32;
+        let mut name: Option<String> = None;
+        let mut last_active_ms = 0u64;
+        if let Ok(files) = fs::read_dir(project_dir.path()) {
+            for file in files.flatten() {
+                let p = file.path();
+                if p.extension().and_then(|s| s.to_str()) != Some("jsonl") {
+                    continue;
+                }
+                sessions += 1;
+                let (c, t, cwd) = accumulate_file(&p);
+                cost += c;
+                tokens += t;
+                if name.is_none() {
+                    name = cwd;
+                }
+                if let Ok(m) = file.metadata().and_then(|m| m.modified()) {
+                    if let Ok(d) = m.duration_since(SystemTime::UNIX_EPOCH) {
+                        last_active_ms = last_active_ms.max(d.as_millis() as u64);
+                    }
+                }
+            }
+        }
+        if sessions == 0 {
+            continue;
+        }
+        out.push(ProjectCost {
+            project: name.unwrap_or_else(|| {
+                project_dir.file_name().to_string_lossy().to_string()
+            }),
+            cost_usd: cost,
+            total_tokens: tokens,
+            sessions,
+            last_active_ms,
+        });
+    }
+    out.sort_by(|a, b| b.cost_usd.partial_cmp(&a.cost_usd).unwrap_or(std::cmp::Ordering::Equal));
+    Ok(out)
+}

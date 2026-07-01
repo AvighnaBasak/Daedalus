@@ -55,6 +55,8 @@ walkdir = "2"
 serde_yaml = "0.9"
 # Real pty layer for the interactive `claude` TUI (ConPTY on Windows)
 portable-pty = "0.8"
+# File-system watcher for preview auto-reload
+notify = "6"
 # Pin image to avoid edition2024 requirement
 image = "=0.25.1"
 

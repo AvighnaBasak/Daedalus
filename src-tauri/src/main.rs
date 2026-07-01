@@ -9,6 +9,8 @@ mod git;
 mod live_usage;
 mod process;
 mod pty;
+mod tunnel;
+mod watch;
 
 use checkpoint::state::CheckpointState;
 use commands::agents::{
@@ -48,15 +50,19 @@ use commands::storage::{
 use commands::usage::{
     get_session_stats, get_usage_by_date_range, get_usage_details, get_usage_stats,
 };
-use files::{list_dir, read_text_file, write_text_file};
+use files::{
+    get_lean_context, list_dir, read_text_file, set_lean_context, write_text_file,
+};
 use git::{
     generate_commit_message, git_checkpoint, git_commit, git_create_worktree, git_current_branch,
     git_diff, git_is_repo, git_list_worktrees, git_log, git_remove_worktree, git_repo_root,
     git_rewind, git_show_head, git_status, run_scaffold, scan_secrets,
 };
-use live_usage::get_live_session_usage;
+use live_usage::{get_cost_history, get_live_session_usage};
 use process::ProcessRegistryState;
 use pty::{pty_kill, pty_resize, pty_spawn, pty_write, PtyState};
+use tunnel::{start_tunnel, stop_tunnel, TunnelState};
+use watch::{unwatch_dir, watch_dir, WatchState};
 use std::sync::Mutex;
 use tauri::Manager;
 
@@ -167,6 +173,10 @@ fn main() {
 
             // Initialize interactive pty state (real `claude` TUI sessions)
             app.manage(PtyState::default());
+
+            // Preview tunnel + file-watch state
+            app.manage(TunnelState::default());
+            app.manage(WatchState::default());
 
             // Apply window vibrancy with rounded corners on macOS
             #[cfg(target_os = "macos")]
@@ -338,6 +348,15 @@ fn main() {
             git_commit,
             scan_secrets,
             generate_commit_message,
+            // Token efficiency
+            get_cost_history,
+            get_lean_context,
+            set_lean_context,
+            // Preview power
+            start_tunnel,
+            stop_tunnel,
+            watch_dir,
+            unwatch_dir,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
