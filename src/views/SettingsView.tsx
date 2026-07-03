@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { ProviderEditor } from "@/components/ProviderEditor";
 import { invoke, isTauri } from "@/lib/tauri";
 import { getLeanContext, setLeanContext } from "@/lib/features";
 import type { Session } from "@/lib/types";
@@ -53,6 +54,15 @@ export function SettingsView({ session }: { session: Session | null }) {
         <div className="mt-6 flex flex-col gap-3">
           <Field label="Claude Code" value={version} />
           <Field label="Daedalus" value="v0.1.0 · AGPL-3.0" />
+        </div>
+
+        <div className="mt-8">
+          <h2 className="mono-label mb-3">Model provider</h2>
+          <p className="mb-3 text-[12px] text-text-muted">
+            Where Claude Code sends its requests. Changing it applies to <b>new</b> sessions
+            (restart existing tabs to switch them over).
+          </p>
+          <ProviderEditor />
         </div>
 
         <div className="mt-8">

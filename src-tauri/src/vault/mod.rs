@@ -56,8 +56,7 @@ fn save_store(store: &Store) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-fn encrypt(value: &str) -> Result<String, String> {
-    let cipher = cipher()?;
+fn encrypt_with(cipher: &Aes256Gcm, value: &str) -> Result<String, String> {
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
     let ct = cipher
         .encrypt(&nonce, value.as_bytes())
@@ -67,17 +66,24 @@ fn encrypt(value: &str) -> Result<String, String> {
     Ok(B64.encode(blob))
 }
 
-fn decrypt(blob_b64: &str) -> Result<String, String> {
+fn decrypt_with(cipher: &Aes256Gcm, blob_b64: &str) -> Result<String, String> {
     let blob = B64.decode(blob_b64).map_err(|e| e.to_string())?;
     if blob.len() < 13 {
         return Err("Corrupt vault entry".into());
     }
     let (nonce, ct) = blob.split_at(12);
-    let cipher = cipher()?;
     let pt = cipher
         .decrypt(Nonce::from_slice(nonce), ct)
         .map_err(|_| "Could not decrypt (vault key changed?)".to_string())?;
     String::from_utf8(pt).map_err(|e| e.to_string())
+}
+
+fn encrypt(value: &str) -> Result<String, String> {
+    encrypt_with(&cipher()?, value)
+}
+
+fn decrypt(blob_b64: &str) -> Result<String, String> {
+    decrypt_with(&cipher()?, blob_b64)
 }
 
 #[derive(Serialize)]
@@ -119,6 +125,39 @@ pub fn vault_delete(cwd: String, name: String) -> Result<(), String> {
         project.remove(&name);
     }
     save_store(&store)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_cipher() -> Aes256Gcm {
+        Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&[7u8; 32]))
+    }
+
+    #[test]
+    fn roundtrip() {
+        let c = test_cipher();
+        let secret = "sk-ant-test-1234567890";
+        let blob = encrypt_with(&c, secret).expect("encrypt");
+        assert_ne!(blob, secret);
+        assert_eq!(decrypt_with(&c, &blob).expect("decrypt"), secret);
+    }
+
+    #[test]
+    fn distinct_nonces() {
+        let c = test_cipher();
+        let a = encrypt_with(&c, "same").unwrap();
+        let b = encrypt_with(&c, "same").unwrap();
+        assert_ne!(a, b, "each encryption must use a fresh nonce");
+    }
+
+    #[test]
+    fn wrong_key_fails() {
+        let blob = encrypt_with(&test_cipher(), "secret").unwrap();
+        let other = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&[9u8; 32]));
+        assert!(decrypt_with(&other, &blob).is_err());
+    }
 }
 
 /// Materialize the project's secrets as a `.env` file, and make sure `.env`

@@ -3,6 +3,7 @@ import { cn } from "@/lib/cn";
 import { StatusDot } from "@/components/ui/StatusDot";
 import { HudStrip } from "./HudStrip";
 import { minimizeWindow, toggleMaximizeWindow, closeWindow } from "@/lib/window";
+import mark from "@/assets/appicon.png";
 import type { Session } from "@/lib/types";
 import type { HudStats } from "@/meter/useSessionStats";
 
@@ -30,7 +31,7 @@ export function TitleBar({
     >
       {/* Brand mark */}
       <div data-tauri-drag-region className="flex items-center gap-2 pr-2">
-        <span className="text-accent">◆</span>
+        <img src={mark} alt="" className="pointer-events-none h-[18px] w-[18px] rounded-[3px]" />
         <span className="mono-label !text-text-secondary">DAEDALUS</span>
       </div>
 

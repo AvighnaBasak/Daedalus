@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { FileCode, GitCompare, Boxes, MonitorSmartphone, X } from "lucide-react";
+import { lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
+import { FileCode, GitCompare, Boxes, MonitorSmartphone, X, Loader2 } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/Tooltip";
 import { IconButton } from "@/components/ui/IconButton";
 import { Rail } from "@/shell/Rail";
@@ -16,13 +16,25 @@ import { VaultView } from "@/views/VaultView";
 import { SubagentsView } from "@/views/SubagentsView";
 import { loadTheme } from "@/lib/theme";
 import { playAttention } from "@/lib/fx";
-import { EditorPanel } from "@/editor/EditorPanel";
-import { GitPanel } from "@/views/GitPanel";
+// Monaco-backed panels load lazily — keeps the initial bundle small and startup fast.
+const EditorPanel = lazy(() =>
+  import("@/editor/EditorPanel").then((m) => ({ default: m.EditorPanel })),
+);
+const GitPanel = lazy(() => import("@/views/GitPanel").then((m) => ({ default: m.GitPanel })));
+
+function PanelLoading() {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <Loader2 size={18} className="animate-spin text-text-muted" />
+    </div>
+  );
+}
 import { ThemePreview } from "@/theme/ThemePreview";
 import { CommandPalette } from "@/palette/CommandPalette";
 import { Onboarding } from "@/onboarding/Onboarding";
 import { pickProjectFolder, basename } from "@/lib/project";
 import { gitRepoRoot, gitCreateWorktree, gitRemoveWorktree } from "@/lib/git";
+import { getProvider } from "@/lib/provider";
 import type { DockId, OverlayId, Session, SessionStatus } from "@/lib/types";
 import { useSessionStats } from "@/meter/useSessionStats";
 
@@ -57,10 +69,27 @@ export default function App() {
     return () => window.removeEventListener("daedalus:theme", onTheme);
   }, []);
 
-  const addSession = useCallback((session: Session) => {
-    setSessions((prev) => [...prev, session]);
-    setActiveId(session.id);
+  const addSession = useCallback(async (session: Session) => {
+    // Stamp the backend the pty will actually spawn with, so a later provider
+    // change can surface a "restart to apply" prompt instead of silently lying.
+    const p = await getProvider().catch(() => null);
+    const stamped: Session = p
+      ? { ...session, spawnedWith: { kind: p.kind, model: p.model, base_url: p.base_url } }
+      : session;
+    setSessions((prev) => [...prev, stamped]);
+    setActiveId(stamped.id);
   }, []);
+
+  // Kill the pty and respawn the same project on the current provider.
+  const restartSession = useCallback(
+    async (id: string) => {
+      const s = sessions.find((x) => x.id === id);
+      if (!s) return;
+      setSessions((prev) => prev.filter((x) => x.id !== id));
+      await addSession({ id: crypto.randomUUID(), title: s.title, cwd: s.cwd, worktree: s.worktree });
+    },
+    [sessions, addSession],
+  );
 
   const newSession = useCallback(async () => {
     const path = await pickProjectFolder();
@@ -198,7 +227,9 @@ export default function App() {
                   onWidthChange={setLeftWidth}
                   onClose={() => setDock(null)}
                 >
-                  <EditorPanel session={activeSession} />
+                  <Suspense fallback={<PanelLoading />}>
+                    <EditorPanel session={activeSession} />
+                  </Suspense>
                 </Dock>
               )}
 
@@ -209,6 +240,7 @@ export default function App() {
                   onNew={newSession}
                   onStatus={setStatus}
                   onToggleFocus={() => setFocusMode((f) => !f)}
+                  onRestart={restartSession}
                 />
               </div>
 
@@ -222,7 +254,11 @@ export default function App() {
                   onWidthChange={setRightWidth}
                   onClose={() => setDock(null)}
                 >
-                  {dock === "git" && <GitPanel session={activeSession} />}
+                  {dock === "git" && (
+                    <Suspense fallback={<PanelLoading />}>
+                      <GitPanel session={activeSession} />
+                    </Suspense>
+                  )}
                   {dock === "mcp" && <McpView session={activeSession} />}
                   {dock === "preview" && <PreviewView session={activeSession} />}
                 </Dock>

@@ -1,4 +1,4 @@
-import { FolderOpen, TerminalSquare, GitBranch, Minimize2, Focus } from "lucide-react";
+import { FolderOpen, TerminalSquare, GitBranch, Minimize2, Focus, RotateCw } from "lucide-react";
 import { Terminal } from "@/terminal/Terminal";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
@@ -8,6 +8,7 @@ import { ModelMenu } from "./ModelMenu";
 import { SnippetsMenu } from "./SnippetsMenu";
 import { invoke, isTauri } from "@/lib/tauri";
 import { cn } from "@/lib/cn";
+import { useProvider } from "@/lib/provider";
 import type { Session, SessionStatus } from "@/lib/types";
 
 /**
@@ -20,16 +21,32 @@ export function SessionHost({
   onNew,
   onStatus,
   onToggleFocus,
+  onRestart,
 }: {
   sessions: Session[];
   activeId: string | null;
   onNew: () => void;
   onStatus: (id: string, status: SessionStatus) => void;
   onToggleFocus: () => void;
+  onRestart: (id: string) => void;
 }) {
   const active = sessions.find((s) => s.id === activeId) ?? null;
+  const provider = useProvider();
 
   if (sessions.length === 0) return <EmptyState onNew={onNew} />;
+
+  // Provider env applies at pty spawn — flag sessions running on an older backend.
+  const stale =
+    !!active?.spawnedWith &&
+    (active.spawnedWith.kind !== provider.kind ||
+      active.spawnedWith.model !== provider.model ||
+      active.spawnedWith.base_url !== provider.base_url);
+  const backendLabel =
+    (active?.spawnedWith?.kind ?? "subscription") === "subscription"
+      ? "ANTHROPIC"
+      : active?.spawnedWith?.kind === "ollama"
+        ? "OLLAMA"
+        : "CUSTOM";
 
   const compact = () => {
     if (active && isTauri()) void invoke("pty_write", { id: active.id, data: "/compact\r" });
@@ -50,7 +67,24 @@ export function SessionHost({
             {active.worktree.branch}
           </span>
         )}
+        <span
+          className="rounded-[var(--r-1)] border border-border px-1.5 py-0.5 text-[9px] tracking-wider text-text-muted"
+          title="Backend this session was started on"
+        >
+          {backendLabel}
+        </span>
         <span className="ml-1 truncate text-[11px] text-text-disabled">{active?.cwd}</span>
+
+        {stale && active && (
+          <button
+            onClick={() => onRestart(active.id)}
+            className="flex shrink-0 items-center gap-1.5 rounded-[var(--r-1)] border border-[color-mix(in_srgb,var(--red)_45%,transparent)] bg-accent-dim px-2 py-1 text-[11px] text-accent-hover transition-colors hover:bg-accent hover:text-white"
+            title="Your provider settings changed after this session started. Restart the session to apply them."
+          >
+            <RotateCw size={11} />
+            Provider changed — restart to apply
+          </button>
+        )}
 
         <div className="ml-auto flex items-center gap-1.5">
           {active && <SnippetsMenu sessionId={active.id} cwd={active.cwd} />}

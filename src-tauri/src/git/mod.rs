@@ -78,6 +78,10 @@ pub fn git_create_worktree(repo: String, branch: String) -> Result<String, Strin
 #[tauri::command]
 pub fn git_list_worktrees(repo: String) -> Result<Vec<WorktreeInfo>, String> {
     let out = git(&repo, &["worktree", "list", "--porcelain"])?;
+    Ok(parse_worktrees(&out))
+}
+
+fn parse_worktrees(out: &str) -> Vec<WorktreeInfo> {
     let mut list = Vec::new();
     let mut path = String::new();
     let mut head = String::new();
@@ -100,7 +104,7 @@ pub fn git_list_worktrees(repo: String) -> Result<Vec<WorktreeInfo>, String> {
     if !path.is_empty() {
         list.push(WorktreeInfo { path, branch, head });
     }
-    Ok(list)
+    list
 }
 
 #[tauri::command]
@@ -320,6 +324,9 @@ pub async fn generate_commit_message(app: tauri::AppHandle, cwd: String) -> Resu
     };
     cmd.arg("-p").arg(instruction);
     cmd.current_dir(&cwd);
+    for (key, value) in crate::provider::current_env() {
+        cmd.env(key, value);
+    }
     cmd.stdin(std::process::Stdio::piped());
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
@@ -337,6 +344,21 @@ pub async fn generate_commit_message(app: tauri::AppHandle, cwd: String) -> Resu
         Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
     } else {
         Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_worktrees;
+
+    #[test]
+    fn parses_worktree_porcelain() {
+        let out = "worktree C:/repo\nHEAD abc123\nbranch refs/heads/main\n\nworktree C:/wt/agent-x\nHEAD abc123\nbranch refs/heads/agent-x\n";
+        let list = parse_worktrees(out);
+        assert_eq!(list.len(), 2);
+        assert_eq!(list[0].branch, "main");
+        assert_eq!(list[1].path, "C:/wt/agent-x");
+        assert_eq!(list[1].branch, "agent-x");
     }
 }
 

@@ -79,6 +79,10 @@ pub fn pty_spawn(
     for (key, value) in std::env::vars() {
         cmd.env(key, value);
     }
+    // Route the CLI at the configured provider (Ollama / custom Anthropic-compatible API).
+    for (key, value) in crate::provider::current_env() {
+        cmd.env(key, value);
+    }
 
     let child = pair
         .slave

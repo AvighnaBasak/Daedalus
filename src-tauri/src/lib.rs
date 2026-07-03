@@ -8,6 +8,7 @@ pub mod files;
 pub mod git;
 pub mod live_usage;
 pub mod process;
+pub mod provider;
 pub mod pty;
 pub mod subagent;
 pub mod tunnel;

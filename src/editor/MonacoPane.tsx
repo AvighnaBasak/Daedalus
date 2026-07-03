@@ -1,5 +1,8 @@
 import Editor, { type OnMount, type BeforeMount } from "@monaco-editor/react";
 import { daedalusNoir } from "./monacoTheme";
+// Monaco is heavy — this import lives here (not main.tsx) so the whole editor
+// bundle loads lazily, only when a Monaco surface first opens.
+import "./setupMonaco";
 
 /**
  * Monaco surface themed as daedalus-noir. Read-oriented for v1 (the terminal is

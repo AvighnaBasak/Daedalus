@@ -8,6 +8,7 @@ mod files;
 mod git;
 mod live_usage;
 mod process;
+mod provider;
 mod pty;
 mod subagent;
 mod tunnel;
@@ -62,6 +63,7 @@ use git::{
 };
 use live_usage::{get_cost_history, get_live_session_usage};
 use process::ProcessRegistryState;
+use provider::{get_provider, list_provider_models, set_provider};
 use pty::{pty_kill, pty_resize, pty_spawn, pty_write, PtyState};
 use subagent::{kill_subagent, spawn_subagent, SubagentState};
 use tunnel::{start_tunnel, stop_tunnel, TunnelState};
@@ -372,6 +374,10 @@ fn main() {
             // Headless sub-agents
             spawn_subagent,
             kill_subagent,
+            // Model provider (subscription / Ollama / custom API)
+            get_provider,
+            set_provider,
+            list_provider_models,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

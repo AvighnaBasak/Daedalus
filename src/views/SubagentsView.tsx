@@ -5,6 +5,7 @@ import { StatusDot } from "@/components/ui/StatusDot";
 import { spawnSubagent, killSubagent } from "@/lib/features";
 import { listen, isTauri } from "@/lib/tauri";
 import { cn } from "@/lib/cn";
+import { useProvider, providerLabel } from "@/lib/provider";
 import type { Session } from "@/lib/types";
 
 interface Task {
@@ -21,6 +22,8 @@ export function SubagentsView({ session }: { session: Session | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState("haiku");
+  const provider = useProvider();
+  const subscription = provider.kind === "subscription";
   const unlisteners = useRef<Map<string, Array<() => void>>>(new Map());
 
   useEffect(() => {
@@ -63,7 +66,8 @@ export function SubagentsView({ session }: { session: Session | null }) {
     unlisteners.current.set(id, uns);
 
     try {
-      await spawnSubagent(id, session.cwd, task.prompt, model);
+      // Non-subscription providers use ANTHROPIC_MODEL from the provider config.
+      await spawnSubagent(id, session.cwd, task.prompt, subscription ? model : "");
     } catch (err) {
       setTasks((t) =>
         t.map((x) => (x.id === id ? { ...x, state: "failed", output: [String(err)] } : x)),
@@ -79,7 +83,7 @@ export function SubagentsView({ session }: { session: Session | null }) {
         <p className="mt-1 text-[13px] text-text-muted">
           Fork a scoped, headless Claude run (tests, docs, refactor) in{" "}
           <span className="font-mono">{session.title}</span> without touching your main session's
-          context. Default model is Haiku — cheap by design.
+          context.{subscription ? " Default model is Haiku — cheap by design." : ""}
         </p>
 
         <div className="mt-5 rounded-[var(--r-2)] border border-border bg-surface-raised p-3 elev-1">
@@ -91,20 +95,30 @@ export function SubagentsView({ session }: { session: Session | null }) {
             className="w-full resize-none rounded-[var(--r-1)] border border-border bg-bg px-2 py-1.5 text-[13px] text-text outline-none placeholder:text-text-disabled focus:border-border-hover"
           />
           <div className="mt-2 flex items-center justify-between">
-            <div className="flex rounded-[var(--r-1)] border border-border p-0.5">
-              {MODELS.map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setModel(m)}
-                  className={cn(
-                    "rounded-[var(--r-1)] px-2.5 py-1 text-[12px] transition-colors",
-                    model === m ? "bg-overlay text-text-emphasis" : "text-text-muted hover:text-text",
-                  )}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
+            {subscription ? (
+              <div className="flex rounded-[var(--r-1)] border border-border p-0.5">
+                {MODELS.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setModel(m)}
+                    className={cn(
+                      "rounded-[var(--r-1)] px-2.5 py-1 text-[12px] transition-colors",
+                      model === m ? "bg-overlay text-text-emphasis" : "text-text-muted hover:text-text",
+                    )}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <span
+                className="text-[11px] text-text-muted"
+                title="Headless agentic runs need strong tool-use models — small local models may fail these tasks."
+              >
+                Uses <span className="font-mono text-text-secondary">{provider.model || "provider default"}</span> via{" "}
+                {providerLabel(provider.kind)} · agentic quality depends on the model
+              </span>
+            )}
             <Button size="sm" variant="solid" onClick={spawn} disabled={!prompt.trim()}>
               <Play size={13} />
               Spawn

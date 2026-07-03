@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { DiffEditor, type BeforeMount } from "@monaco-editor/react";
+import "@/editor/setupMonaco";
 import {
   RefreshCw, Sparkles, GitCommitHorizontal, ShieldAlert, Loader2, GitBranch, FileDiff, History,
 } from "lucide-react";

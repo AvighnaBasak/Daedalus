@@ -27,15 +27,20 @@ fn encode_cwd(cwd: &str) -> String {
 }
 
 /// Per-token USD rates: (input, output, cache_write, cache_read).
+/// Non-Anthropic models (Ollama / custom providers) are priced at $0 — local is
+/// free, and third-party API pricing isn't ours to guess.
 fn price_for(model: &str) -> (f64, f64, f64, f64) {
     let m = model.to_lowercase();
+    if !m.contains("claude") {
+        return (0.0, 0.0, 0.0, 0.0);
+    }
     let per_m = |a: f64| a / 1_000_000.0;
     if m.contains("opus") {
         (per_m(15.0), per_m(75.0), per_m(18.75), per_m(1.50))
     } else if m.contains("haiku") {
         (per_m(0.80), per_m(4.0), per_m(1.0), per_m(0.08))
     } else {
-        // sonnet / default
+        // sonnet / other claude models
         (per_m(3.0), per_m(15.0), per_m(3.75), per_m(0.30))
     }
 }
@@ -230,4 +235,30 @@ pub fn get_cost_history() -> Result<Vec<ProjectCost>, String> {
     }
     out.sort_by(|a, b| b.cost_usd.partial_cmp(&a.cost_usd).unwrap_or(std::cmp::Ordering::Equal));
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encode_cwd_matches_claude_scheme() {
+        assert_eq!(encode_cwd(r"C:\_C_\Users\daedalus"), "C---C--Users-daedalus");
+        assert_eq!(encode_cwd("/home/user/my.app"), "-home-user-my-app");
+    }
+
+    #[test]
+    fn anthropic_models_are_priced() {
+        let (i, o, _, _) = price_for("claude-opus-4-8");
+        assert!(i > 0.0 && o > 0.0);
+        let (i, _, _, _) = price_for("claude-haiku-4-5-20251001");
+        assert!(i > 0.0);
+    }
+
+    #[test]
+    fn local_and_custom_models_are_free() {
+        for m in ["qwen3-coder:30b", "glm-4.7", "deepseek-chat", "llama3.3"] {
+            assert_eq!(price_for(m), (0.0, 0.0, 0.0, 0.0), "{m} should be free");
+        }
+    }
 }

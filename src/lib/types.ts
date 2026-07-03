@@ -29,4 +29,6 @@ export interface Session {
   status?: SessionStatus;
   /** last time output was seen (ms epoch) */
   lastActivity?: number;
+  /** backend this session's pty was spawned with (provider env is applied at spawn) */
+  spawnedWith?: { kind: string; model: string; base_url: string };
 }

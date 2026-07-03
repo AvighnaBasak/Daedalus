@@ -44,6 +44,9 @@ pub async fn spawn_subagent(
         cmd.arg("--model").arg(&model);
     }
     cmd.current_dir(&cwd);
+    for (key, value) in crate::provider::current_env() {
+        cmd.env(key, value);
+    }
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
     cmd.stdin(std::process::Stdio::null());

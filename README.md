@@ -28,6 +28,26 @@ it more powerful:
 
 ## Features
 
+**Bring your own brain — three ways to run it**
+
+Daedalus always drives the real Claude Code CLI, but *where it thinks* is your choice
+(picked in onboarding, switchable any time in Settings):
+
+| Backend | Cost | How |
+|---|---|---|
+| **Claude subscription** (default) | your plan | the CLI's normal Anthropic login |
+| **Ollama — local & free** | $0 | Ollama v0.14+ speaks the Anthropic API natively; Daedalus injects `ANTHROPIC_BASE_URL` |
+| **Any API key** | your provider's | any Anthropic-compatible endpoint (DeepSeek, GLM, Kimi, LM Studio, gateways…) |
+
+The whole app adapts: cost tracking shows **$0 / untracked** for local & custom models, sub-agents
+follow the same backend, and the model switcher gains **live catalog search** — your installed
+Ollama models, or OpenRouter's full list filtered to tool-capable (Claude Code-usable) models
+(256 of 340 at the time of writing, including Gemini and GPT via OpenRouter). Sessions are stamped
+with the backend they started on; change providers and a one-click **"restart to apply"** chip
+appears. The UI tells you honestly when a feature depends on model quality (small local models can
+struggle with agentic tool use — prefer 64k+ context coding models like `qwen3-coder`), and that
+raw Google/OpenAI keys need a gateway like OpenRouter or LiteLLM.
+
 **Core cockpit**
 - **Live Claude Code terminal** — the real interactive TUI over a pty, with multi-session tabs that
   all keep running in the background when you switch.
@@ -101,8 +121,9 @@ interactive CLI over a pty rather than driving Claude headlessly.
 
 ## Prerequisites (Windows)
 
-- **[Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)** installed and authenticated
-  (`npm i -g @anthropic-ai/claude-code`, then run `claude` once to sign in).
+- **[Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)** installed
+  (`npm i -g @anthropic-ai/claude-code`). A Claude subscription is optional — Ollama or any
+  Anthropic-compatible API key works too (configured in onboarding/Settings).
 - **Node.js** 20+ and **Rust** (stable, `x86_64-pc-windows-msvc`).
 - **Visual Studio Build Tools** with the **Desktop development with C++** workload (MSVC + Windows SDK):
   ```powershell
@@ -124,8 +145,12 @@ npm run tauri dev      # launches the app (first Rust build takes a few minutes)
 Build an installer:
 
 ```bash
-npm run tauri build    # produces NSIS (.exe) and MSI bundles on Windows
+npm run tauri build    # branded NSIS (.exe) + MSI bundles on Windows
 ```
+
+**Fast & light by design** — no Electron (native WebView2), a size-optimized LTO release build,
+and a lazily-loaded editor: Monaco's ~3 MB only loads the first time you open the Files or Git
+panel, so the cockpit starts on a ~200 kB (gzipped) bundle.
 
 ## Project structure
 
