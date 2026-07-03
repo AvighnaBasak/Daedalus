@@ -57,6 +57,8 @@ serde_yaml = "0.9"
 portable-pty = "0.8"
 # File-system watcher for preview auto-reload
 notify = "6"
+# Encrypted .env vault (AES-256-GCM at rest)
+aes-gcm = "0.10"
 # Pin image to avoid edition2024 requirement
 image = "=0.25.1"
 

@@ -9,7 +9,9 @@ mod git;
 mod live_usage;
 mod process;
 mod pty;
+mod subagent;
 mod tunnel;
+mod vault;
 mod watch;
 
 use checkpoint::state::CheckpointState;
@@ -61,7 +63,9 @@ use git::{
 use live_usage::{get_cost_history, get_live_session_usage};
 use process::ProcessRegistryState;
 use pty::{pty_kill, pty_resize, pty_spawn, pty_write, PtyState};
+use subagent::{kill_subagent, spawn_subagent, SubagentState};
 use tunnel::{start_tunnel, stop_tunnel, TunnelState};
+use vault::{vault_delete, vault_list, vault_set, vault_write_env};
 use watch::{unwatch_dir, watch_dir, WatchState};
 use std::sync::Mutex;
 use tauri::Manager;
@@ -177,6 +181,9 @@ fn main() {
             // Preview tunnel + file-watch state
             app.manage(TunnelState::default());
             app.manage(WatchState::default());
+
+            // Headless sub-agent registry
+            app.manage(SubagentState::default());
 
             // Apply window vibrancy with rounded corners on macOS
             #[cfg(target_os = "macos")]
@@ -357,6 +364,14 @@ fn main() {
             stop_tunnel,
             watch_dir,
             unwatch_dir,
+            // Secrets vault
+            vault_list,
+            vault_set,
+            vault_delete,
+            vault_write_env,
+            // Headless sub-agents
+            spawn_subagent,
+            kill_subagent,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

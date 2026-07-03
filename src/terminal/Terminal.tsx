@@ -4,6 +4,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { invoke, listen, isTauri } from "@/lib/tauri";
 import { daedalusXtermTheme } from "./xtermTheme";
+import { currentAccent, accentAlpha } from "@/lib/theme";
 import type { SessionStatus } from "@/lib/types";
 
 function b64ToBytes(b64: string): Uint8Array {
@@ -46,13 +47,19 @@ export function Terminal({
     const host = hostRef.current;
     if (!host) return;
 
+    const accent = currentAccent();
     const term = new XTerm({
       fontFamily: 'var(--font-mono), "JetBrains Mono", Consolas, monospace',
       fontSize: 13,
       lineHeight: 1.2,
       cursorBlink: true,
       cursorStyle: "block",
-      theme: daedalusXtermTheme,
+      theme: {
+        ...daedalusXtermTheme,
+        cursor: accent,
+        selectionBackground: accentAlpha(accent, 0.22),
+        red: accent,
+      },
       allowProposedApi: true,
       scrollback: 10000,
     });

@@ -19,3 +19,20 @@ export const startTunnel = (port: number) => invoke<string>("start_tunnel", { po
 export const stopTunnel = () => invoke<void>("stop_tunnel");
 export const watchDir = (path: string) => invoke<void>("watch_dir", { path });
 export const unwatchDir = () => invoke<void>("unwatch_dir");
+
+// v6 — secrets vault
+export interface VaultEntry {
+  name: string;
+  value: string;
+}
+export const vaultList = (cwd: string) => invoke<VaultEntry[]>("vault_list", { cwd });
+export const vaultSet = (cwd: string, name: string, value: string) =>
+  invoke<void>("vault_set", { cwd, name, value });
+export const vaultDelete = (cwd: string, name: string) =>
+  invoke<void>("vault_delete", { cwd, name });
+export const vaultWriteEnv = (cwd: string) => invoke<string>("vault_write_env", { cwd });
+
+// v6 — headless sub-agents
+export const spawnSubagent = (id: string, cwd: string, prompt: string, model: string) =>
+  invoke<void>("spawn_subagent", { id, cwd, prompt, model });
+export const killSubagent = (id: string) => invoke<void>("kill_subagent", { id });

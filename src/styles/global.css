@@ -112,3 +112,42 @@
     outline-offset: 1px;
   }
 }
+
+@layer utilities {
+  /* Depth — neutral black shadows only (never colored, never a glow). */
+  .elev-1 {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 3px 10px rgba(0, 0, 0, 0.35);
+  }
+  .elev-2 {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.55), 0 12px 32px rgba(0, 0, 0, 0.45);
+  }
+
+  /* Liquid glass: translucent surface + backdrop blur, hairline kept crisp. */
+  .glass {
+    background: color-mix(in srgb, var(--overlay) 72%, transparent);
+    backdrop-filter: blur(14px) saturate(1.1);
+    -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  }
+  .glass-deep {
+    background: color-mix(in srgb, var(--bg) 62%, transparent);
+    backdrop-filter: blur(18px) saturate(1.05);
+    -webkit-backdrop-filter: blur(18px) saturate(1.05);
+  }
+
+  /* Film grain overlay (SVG turbulence, static). */
+  .grain {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+  }
+
+  /* Attention hairline pulse — opacity animation on a 1px line, no glow. */
+  @keyframes hairline-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+  .attention-hairline {
+    background: var(--accent);
+    animation: hairline-pulse 1.2s ease-in-out infinite;
+  }
+}

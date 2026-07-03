@@ -12,6 +12,10 @@ import { SettingsView } from "@/views/SettingsView";
 import { BoardView } from "@/views/BoardView";
 import { TemplatesView } from "@/views/TemplatesView";
 import { CostView } from "@/views/CostView";
+import { VaultView } from "@/views/VaultView";
+import { SubagentsView } from "@/views/SubagentsView";
+import { loadTheme } from "@/lib/theme";
+import { playAttention } from "@/lib/fx";
 import { EditorPanel } from "@/editor/EditorPanel";
 import { GitPanel } from "@/views/GitPanel";
 import { ThemePreview } from "@/theme/ThemePreview";
@@ -40,9 +44,18 @@ export default function App() {
   const [rightWidth, setRightWidth] = useState(580);
   const [overlay, setOverlay] = useState<OverlayId | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const [fx, setFx] = useState(() => loadTheme());
 
   const activeSession = sessions.find((s) => s.id === activeId) ?? null;
   const stats = useSessionStats(activeSession);
+
+  // React to theme edits (grain/sound toggles) from the Theme view.
+  useEffect(() => {
+    const onTheme = () => setFx(loadTheme());
+    window.addEventListener("daedalus:theme", onTheme);
+    return () => window.removeEventListener("daedalus:theme", onTheme);
+  }, []);
 
   const addSession = useCallback((session: Session) => {
     setSessions((prev) => [...prev, session]);
@@ -96,11 +109,16 @@ export default function App() {
     [closeSession],
   );
 
-  const setStatus = useCallback((id: string, status: SessionStatus) => {
-    setSessions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status, lastActivity: Date.now() } : s)),
-    );
-  }, []);
+  const setStatus = useCallback(
+    (id: string, status: SessionStatus) => {
+      setSessions((prev) => {
+        const before = prev.find((s) => s.id === id)?.status;
+        if (status === "attention" && before !== "attention" && fx.sound) playAttention();
+        return prev.map((s) => (s.id === id ? { ...s, status, lastActivity: Date.now() } : s));
+      });
+    },
+    [fx.sound],
+  );
 
   const toggleDock = useCallback((d: DockId) => {
     setOverlay(null);
@@ -122,7 +140,14 @@ export default function App() {
         e.preventDefault();
         setPaletteOpen((o) => !o);
       }
-      if (e.key === "Escape") setOverlay(null);
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        setFocusMode((f) => !f);
+      }
+      if (e.key === "Escape") {
+        setOverlay(null);
+        setFocusMode(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -143,7 +168,9 @@ export default function App() {
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg text-text">
+      {/* Thin accent frame around the whole app + optional film grain. */}
+      <div className="flex h-screen w-screen flex-col overflow-hidden border border-accent bg-bg text-text">
+        {fx.grain && <div className="grain pointer-events-none fixed inset-0 z-[90]" />}
         <TitleBar
           sessions={sessions}
           activeId={activeId}
@@ -155,11 +182,13 @@ export default function App() {
         />
 
         <div className="flex min-h-0 flex-1">
-          <Rail dock={dock} onToggleDock={toggleDock} overlay={overlay} onToggleOverlay={toggleOverlay} />
+          {!focusMode && (
+            <Rail dock={dock} onToggleDock={toggleDock} overlay={overlay} onToggleOverlay={toggleOverlay} />
+          )}
 
           <div className="relative min-w-0 flex-1">
             <div className="flex h-full">
-              {dock === "editor" && (
+              {!focusMode && dock === "editor" && (
                 <Dock
                   key="leftdock"
                   side="left"
@@ -174,10 +203,16 @@ export default function App() {
               )}
 
               <div key="main" className="min-w-0 flex-1">
-                <SessionHost sessions={sessions} activeId={activeId} onNew={newSession} onStatus={setStatus} />
+                <SessionHost
+                  sessions={sessions}
+                  activeId={activeId}
+                  onNew={newSession}
+                  onStatus={setStatus}
+                  onToggleFocus={() => setFocusMode((f) => !f)}
+                />
               </div>
 
-              {(dock === "git" || dock === "mcp" || dock === "preview") && (
+              {!focusMode && (dock === "git" || dock === "mcp" || dock === "preview") && (
                 <Dock
                   key="rightdock"
                   side="right"
@@ -195,7 +230,7 @@ export default function App() {
             </div>
 
             {overlay && (
-              <div className="absolute inset-0 z-40 bg-bg">
+              <div className="glass-deep absolute inset-0 z-40">
                 <div className="flex h-9 items-center justify-end border-b border-border px-1.5">
                   <IconButton onClick={() => setOverlay(null)} aria-label="Close">
                     <X size={16} />
@@ -222,6 +257,8 @@ export default function App() {
                     />
                   )}
                   {overlay === "cost" && <CostView />}
+                  {overlay === "vault" && <VaultView session={activeSession} />}
+                  {overlay === "subagents" && <SubagentsView session={activeSession} />}
                   {overlay === "settings" && <SettingsView session={activeSession} />}
                   {overlay === "theme" && <ThemePreview />}
                 </div>

@@ -33,7 +33,7 @@ export function ModelMenu({ sessionId }: { sessionId: string }) {
         <Popover.Content
           align="end"
           sideOffset={6}
-          className="z-50 w-56 rounded-[var(--r-3)] border border-border-strong bg-overlay p-1.5"
+          className="glass elev-2 z-50 w-56 rounded-[var(--r-3)] border border-border-strong p-1.5"
         >
           <span className="mono-label block px-2 py-1">Switch model</span>
           {MODELS.map((m) => (

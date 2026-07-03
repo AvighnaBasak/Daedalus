@@ -136,6 +136,27 @@ Claude Code CLI itself stays untouched and is a required external dependency (`c
 
 Everything else in the feature list above bolts on incrementally after v1 is stable.
 
+## Status (feature audit vs this spec)
+
+**Done** — Tauri shell + Monaco; real interactive `claude` over a managed pty (multiplexed, all
+sessions stay alive); SQLite-local, no cloud; multi-session board; sub-agent spawner (headless
+`claude -p`); auto git-worktree isolation; checkpoint & rewind; attention routing (permission/plan
+prompts flag the tab/board); context budget meter + live $ per session; lean-context presets
+(permissions.deny); per-session model switching (incl. cheap subagent default = Haiku); session
+compaction; cost history/leaderboard; MCP list/add/remove + curated quick-installs + health dots +
+local/user scoping; device-frame preview + QR + public ngrok tunnel; multi-tab mini browser;
+auto-refresh on save; template gallery + clone-my-stack; encrypted `.env` vault + git-ignore
+guard; sanitize-before-commit secret scan; commit graph; AI commit messages via `claude -p`;
+⌘K palette; snippets history; focus mode; plain-English error overlay/onboarding; grain, sound
+cues, custom accent/background themes, stats HUD, recap card export.
+
+**Consciously deferred** (reasons in README): browser console/network capture and pin-tab
+screenshots (need Playwright/CDP, not a webview iframe); full plan-text step rail (TUI parsing too
+brittle — prompts are detected/routed instead); session replay/GIF; Expo Go deep integration
+(the QR tunnel already covers scanning a Metro server); image generation & voice (kept out to stay
+zero-cost); cache-aware prompt structuring & diff-only context (the CLI owns prompt assembly —
+not interceptable from a shell without rebuilding the chat, which this project deliberately avoids).
+
 ## License
 
 AGPL-3.0, fully open source (inherited from the forked `opcode` base). Claude Code CLI remains a required external dependency owned by Anthropic and is not redistributed as part of this project.

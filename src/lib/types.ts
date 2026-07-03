@@ -1,7 +1,14 @@
 /** Right-side dock panels (open beside the always-mounted terminal). */
 export type DockId = "editor" | "git" | "mcp" | "preview";
 /** Full-screen config overlays (rendered over the terminal, which stays mounted). */
-export type OverlayId = "settings" | "theme" | "board" | "templates" | "cost";
+export type OverlayId =
+  | "settings"
+  | "theme"
+  | "board"
+  | "templates"
+  | "cost"
+  | "vault"
+  | "subagents";
 
 /** Live activity of a session's agent, inferred from its pty output. */
 export type SessionStatus = "idle" | "working" | "attention";

@@ -70,6 +70,21 @@ it more powerful:
 - **Public tunnel + QR** — expose the local dev server via ngrok and scan the QR from any network.
 - **Multi-tab preview** and **auto-reload on save** (a file watcher refreshes the in-app browser).
 
+**Secrets, env & QoL**
+- **Encrypted secrets vault** — per-project keys stored AES-256-GCM encrypted outside the repo;
+  materialize a git-ignored `.env` on demand. Raw keys never sit in Claude's context.
+- **Sub-agent spawner** — fork a headless `claude -p` (Haiku by default) for scoped tasks with
+  live streamed output, without polluting the main session.
+- **Focus mode** (`Ctrl+Shift+F`) — hide everything but the terminal.
+- **Snippets** — per-project clipboard/snippet history, pasted straight into the live CLI.
+
+**Aesthetic & shareability**
+- **Custom themes** — pick or fine-tune the accent color and background tone; everything follows,
+  including the terminal cursor. Film grain and sound cues are toggleable.
+- **Attention cues** — a pulsing hairline (and optional two-note chime) when an agent needs you.
+- **Stats HUD + recap card** — lifetime projects/sessions/tokens/cost on the board, exportable as
+  a styled PNG for build-in-public posts.
+
 Panels dock beside the always-present terminal (Editor on the left; MCP and Preview on the right)
 and close with `X` to return Claude to fullscreen — the session never restarts when you open a panel.
 
@@ -139,12 +154,15 @@ Everything derives from `src/styles/tokens.css`. The rule: **the only chroma in 
 everything else is greyscale, and there are no gradients** — elevation comes from surface steps and
 1px hairlines. Base `#0A0A0A`, accent `#E5484D`.
 
-## Roadmap
+## Roadmap / consciously deferred
 
-- Public QR tunnel (cloudflared) so the device preview works off-network.
-- Auto-open the editor when Claude edits a file.
-- Commit graph + AI commit messages; secrets vault and pre-commit secret scanning.
-- Gamerish FX pass: film grain, reactive background, sound cues, session streak HUD.
+- **Console/network capture in the preview** — needs a Playwright/CDP-driven browser (webview
+  iframes can't expose cross-origin consoles); planned as an opt-in later.
+- **Pin-a-tab screenshots into context** — same Playwright dependency as above.
+- **Session replay/GIF export** — recap cards ship today; full replay is a heavy add.
+- **Plan-mode step rail** — plan/permission prompts are detected and routed (red pulse); parsing
+  full plan text out of the TUI is too brittle to ship.
+- **Image generation / voice I/O** — intentionally out of scope to keep Daedalus zero-cost.
 - macOS polish.
 
 ## License

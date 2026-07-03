@@ -49,7 +49,7 @@ export function Dock({
     <div
       ref={ref}
       className={cn(
-        "relative flex h-full shrink-0 flex-col bg-bg",
+        "elev-2 relative z-10 flex h-full shrink-0 flex-col bg-bg",
         side === "right" ? "border-l border-border" : "border-r border-border",
       )}
       style={{ width }}

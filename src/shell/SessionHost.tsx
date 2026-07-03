@@ -1,9 +1,11 @@
-import { FolderOpen, TerminalSquare, GitBranch, Minimize2 } from "lucide-react";
+import { FolderOpen, TerminalSquare, GitBranch, Minimize2, Focus } from "lucide-react";
 import { Terminal } from "@/terminal/Terminal";
 import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { CheckpointMenu } from "./CheckpointMenu";
 import { ModelMenu } from "./ModelMenu";
+import { SnippetsMenu } from "./SnippetsMenu";
 import { invoke, isTauri } from "@/lib/tauri";
 import { cn } from "@/lib/cn";
 import type { Session, SessionStatus } from "@/lib/types";
@@ -17,11 +19,13 @@ export function SessionHost({
   activeId,
   onNew,
   onStatus,
+  onToggleFocus,
 }: {
   sessions: Session[];
   activeId: string | null;
   onNew: () => void;
   onStatus: (id: string, status: SessionStatus) => void;
+  onToggleFocus: () => void;
 }) {
   const active = sessions.find((s) => s.id === activeId) ?? null;
 
@@ -32,7 +36,11 @@ export function SessionHost({
   };
 
   return (
-    <div className="flex h-full flex-col bg-bg">
+    <div className="relative flex h-full flex-col bg-bg">
+      {/* attention pulse: 1px hairline across the top when the agent needs you */}
+      {active?.status === "attention" && (
+        <div className="attention-hairline absolute inset-x-0 top-0 z-10 h-px" />
+      )}
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-3">
         <TerminalSquare size={13} className="text-text-muted" />
         <span className="mono-label">Terminal · claude</span>
@@ -45,6 +53,7 @@ export function SessionHost({
         <span className="ml-1 truncate text-[11px] text-text-disabled">{active?.cwd}</span>
 
         <div className="ml-auto flex items-center gap-1.5">
+          {active && <SnippetsMenu sessionId={active.id} cwd={active.cwd} />}
           {active && <ModelMenu sessionId={active.id} />}
           {active && <CheckpointMenu session={active} />}
           <Tooltip content="Summarize & prune context (/compact)" side="bottom">
@@ -52,6 +61,11 @@ export function SessionHost({
               <Minimize2 size={13} />
               Compact
             </Button>
+          </Tooltip>
+          <Tooltip content="Focus mode (Ctrl+Shift+F)" side="bottom">
+            <IconButton onClick={onToggleFocus} aria-label="Focus mode">
+              <Focus size={15} />
+            </IconButton>
           </Tooltip>
         </div>
       </div>

@@ -1,8 +1,17 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { StatusDot } from "@/components/ui/StatusDot";
 import { Meter } from "@/components/ui/Meter";
 import { Bell, Check, Plus, Trash2 } from "lucide-react";
+import { cn } from "@/lib/cn";
+import {
+  ACCENT_PRESETS,
+  BG_PRESETS,
+  loadTheme,
+  saveTheme,
+  type ThemeSettings,
+} from "@/lib/theme";
 
 const GREYS = [
   "--black", "--grey-950", "--grey-900", "--grey-850", "--grey-800", "--grey-700",
@@ -12,16 +21,95 @@ const GREYS = [
 const REDS = ["--red-lo", "--red-mid", "--red", "--red-hi"];
 
 export function ThemePreview() {
+  const [theme, setTheme] = useState<ThemeSettings>(() => loadTheme());
+
+  const update = (patch: Partial<ThemeSettings>) => {
+    const next = { ...theme, ...patch };
+    setTheme(next);
+    saveTheme(next);
+  };
+
   return (
     <div className="h-full overflow-y-auto bg-bg">
       <div className="mx-auto max-w-3xl px-8 py-8">
         <header className="mb-8">
-          <span className="mono-label">Design System</span>
-          <h1 className="mt-1 text-[28px] leading-tight text-text-emphasis">Daedalus — matte noir</h1>
+          <span className="mono-label">Theme</span>
+          <h1 className="mt-1 text-[28px] leading-tight text-text-emphasis">Make it yours</h1>
           <p className="mt-2 text-text-muted">
-            Greyscale + a single red accent. No gradients. Elevation via surface steps and 1px hairlines.
+            Greyscale + one accent. No gradients, no glow — depth comes from surfaces, hairlines and shadow.
           </p>
         </header>
+
+        {/* ---- customization ---- */}
+        <Section title="Accent color">
+          <div className="flex flex-wrap items-center gap-2">
+            {ACCENT_PRESETS.map((p) => (
+              <button
+                key={p.hex}
+                onClick={() => update({ accent: p.hex })}
+                title={p.name}
+                className={cn(
+                  "flex h-9 items-center gap-2 rounded-[var(--r-2)] border px-3 text-[12px] transition-colors",
+                  theme.accent.toLowerCase() === p.hex.toLowerCase()
+                    ? "border-border-strong bg-surface-raised text-text-emphasis"
+                    : "border-border text-text-muted hover:border-border-hover",
+                )}
+              >
+                <span className="h-3.5 w-3.5 rounded-full" style={{ background: p.hex }} />
+                {p.name}
+              </button>
+            ))}
+            <label className="flex h-9 cursor-pointer items-center gap-2 rounded-[var(--r-2)] border border-border px-3 text-[12px] text-text-muted hover:border-border-hover">
+              <input
+                type="color"
+                value={theme.accent}
+                onChange={(e) => update({ accent: e.target.value })}
+                className="h-5 w-6 cursor-pointer border-0 bg-transparent p-0"
+              />
+              Custom
+              <span className="tabular font-mono text-[11px] text-text-disabled">{theme.accent}</span>
+            </label>
+          </div>
+        </Section>
+
+        <Section title="Background">
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(BG_PRESETS) as ThemeSettings["bg"][]).map((id) => (
+              <button
+                key={id}
+                onClick={() => update({ bg: id })}
+                className={cn(
+                  "flex h-9 items-center gap-2 rounded-[var(--r-2)] border px-3 text-[12px] transition-colors",
+                  theme.bg === id
+                    ? "border-border-strong bg-surface-raised text-text-emphasis"
+                    : "border-border text-text-muted hover:border-border-hover",
+                )}
+              >
+                <span className="h-3.5 w-3.5 rounded-[3px] border border-border-strong" style={{ background: BG_PRESETS[id].hex }} />
+                {BG_PRESETS[id].name}
+              </button>
+            ))}
+          </div>
+        </Section>
+
+        <Section title="Effects">
+          <div className="flex flex-col gap-2">
+            <EffectRow
+              label="Film grain"
+              desc="Subtle static texture over the whole app."
+              on={theme.grain}
+              onToggle={() => update({ grain: !theme.grain })}
+            />
+            <EffectRow
+              label="Sound cues"
+              desc="A quiet two-note chime when an agent needs your input."
+              on={theme.sound}
+              onToggle={() => update({ sound: !theme.sound })}
+            />
+          </div>
+        </Section>
+
+        <div className="my-8 h-px bg-border" />
 
         <Section title="Greyscale ramp">
           <div className="grid grid-cols-7 gap-2">
@@ -89,6 +177,42 @@ export function ThemePreview() {
           </div>
         </Section>
       </div>
+    </div>
+  );
+}
+
+function EffectRow({
+  label,
+  desc,
+  on,
+  onToggle,
+}: {
+  label: string;
+  desc: string;
+  on: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-[var(--r-2)] border border-border bg-surface px-4 py-3">
+      <div className="min-w-0 pr-4">
+        <p className="text-[13px] text-text">{label}</p>
+        <p className="mt-0.5 text-[12px] text-text-muted">{desc}</p>
+      </div>
+      <button
+        onClick={onToggle}
+        aria-pressed={on}
+        className={cn(
+          "relative h-5 w-9 shrink-0 rounded-full transition-colors",
+          on ? "bg-accent" : "bg-grey-600",
+        )}
+      >
+        <span
+          className={cn(
+            "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all",
+            on ? "left-[18px]" : "left-0.5",
+          )}
+        />
+      </button>
     </div>
   );
 }

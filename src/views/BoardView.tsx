@@ -1,8 +1,12 @@
-import { FolderOpen, GitBranch, Trash2, X, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FolderOpen, GitBranch, Trash2, X, Plus, ImageDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { StatusDot } from "@/components/ui/StatusDot";
 import { Meter } from "@/components/ui/Meter";
 import { useSessionStats } from "@/meter/useSessionStats";
+import { getCostHistory } from "@/lib/features";
+import { downloadRecapCard, type RecapStats } from "@/lib/recap";
+import { isTauri } from "@/lib/tauri";
 import type { Session } from "@/lib/types";
 
 function ago(ts?: number): string {
@@ -33,10 +37,26 @@ export function BoardView({
   onRemoveWorktree: (session: Session) => void;
   onClose: (id: string) => void;
 }) {
+  const [recap, setRecap] = useState<RecapStats>({ projects: 0, sessions: 0, totalTokens: 0, totalCost: 0 });
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    getCostHistory()
+      .then((rows) =>
+        setRecap({
+          projects: rows.length,
+          sessions: rows.reduce((a, r) => a + r.sessions, 0),
+          totalTokens: rows.reduce((a, r) => a + r.total_tokens, 0),
+          totalCost: rows.reduce((a, r) => a + r.cost_usd, 0),
+        }),
+      )
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="h-full overflow-y-auto bg-bg">
       <div className="mx-auto max-w-5xl px-8 py-6">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-5 flex items-center justify-between">
           <div>
             <span className="mono-label">Agent Board</span>
             <h1 className="mt-1 text-[22px] text-text-emphasis">
@@ -44,6 +64,10 @@ export function BoardView({
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => void downloadRecapCard(recap)} title="Download a recap card (PNG)">
+              <ImageDown size={14} />
+              Recap card
+            </Button>
             <Button variant="outline" onClick={onNew}>
               <FolderOpen size={14} />
               Open folder
@@ -53,6 +77,14 @@ export function BoardView({
               New isolated agent
             </Button>
           </div>
+        </div>
+
+        {/* stats HUD */}
+        <div className="mb-6 grid grid-cols-4 gap-2">
+          <Stat label="Projects" value={String(recap.projects)} />
+          <Stat label="All sessions" value={String(recap.sessions)} />
+          <Stat label="Tokens" value={recap.totalTokens >= 1_000_000 ? `${(recap.totalTokens / 1_000_000).toFixed(1)}M` : `${Math.round(recap.totalTokens / 1000)}k`} />
+          <Stat label="Total cost" value={`$${recap.totalCost.toFixed(2)}`} />
         </div>
 
         {sessions.length === 0 ? (
@@ -161,7 +193,16 @@ function BoardCard({
 
 function cnCard(active: boolean): string {
   return [
-    "cursor-pointer rounded-[var(--r-2)] border bg-surface p-3 transition-colors",
+    "elev-1 cursor-pointer rounded-[var(--r-2)] border bg-surface p-3 transition-all hover:-translate-y-px",
     active ? "border-border-strong" : "border-border hover:border-border-hover",
   ].join(" ");
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="elev-1 rounded-[var(--r-2)] border border-border bg-surface px-3.5 py-3">
+      <p className="mono-label !text-[10px]">{label}</p>
+      <p className="tabular mt-1 text-[20px] leading-none text-text-emphasis">{value}</p>
+    </div>
+  );
 }

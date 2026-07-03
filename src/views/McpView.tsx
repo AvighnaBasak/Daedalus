@@ -30,6 +30,15 @@ type Load =
 type Transport = "stdio" | "sse";
 type Scope = "local" | "user";
 
+/** Curated one-click installs for the most-used MCP servers. */
+const POPULAR: { name: string; note: string; command: string; args: string[] }[] = [
+  { name: "filesystem", note: "Read/write scoped project files", command: "npx", args: ["-y", "@modelcontextprotocol/server-filesystem", "."] },
+  { name: "memory", note: "Persistent knowledge graph memory", command: "npx", args: ["-y", "@modelcontextprotocol/server-memory"] },
+  { name: "github", note: "Repos, issues, PRs (needs token)", command: "npx", args: ["-y", "@modelcontextprotocol/server-github"] },
+  { name: "playwright", note: "Drive a real browser", command: "npx", args: ["-y", "@playwright/mcp@latest"] },
+  { name: "puppeteer", note: "Headless Chrome automation", command: "npx", args: ["-y", "@modelcontextprotocol/server-puppeteer"] },
+];
+
 export function McpView({ session }: { session: Session | null }) {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [adding, setAdding] = useState(false);
@@ -58,6 +67,27 @@ export function McpView({ session }: { session: Session | null }) {
       await refresh();
     } catch (e) {
       setLoad({ state: "error", message: String(e) });
+    }
+  };
+
+  const [quickBusy, setQuickBusy] = useState<string | null>(null);
+  const quickAdd = async (p: (typeof POPULAR)[number]) => {
+    setQuickBusy(p.name);
+    try {
+      await invoke<AddServerResult>("mcp_add", {
+        name: p.name,
+        transport: "stdio",
+        command: p.command,
+        args: p.args,
+        env: {},
+        url: null,
+        scope: "local",
+      });
+      await refresh();
+    } catch (e) {
+      setLoad({ state: "error", message: String(e) });
+    } finally {
+      setQuickBusy(null);
     }
   };
 
@@ -107,6 +137,27 @@ export function McpView({ session }: { session: Session | null }) {
             </p>
           </div>
         )}
+        {/* one-click popular installs */}
+        {load.state === "ready" && (
+          <div className="mb-4">
+            <p className="mono-label mb-2">Popular servers</p>
+            <div className="flex flex-wrap gap-1.5">
+              {POPULAR.filter((p) => !load.servers.some((s) => s.name === p.name)).map((p) => (
+                <button
+                  key={p.name}
+                  onClick={() => quickAdd(p)}
+                  disabled={quickBusy !== null}
+                  title={`${p.note} — ${p.command} ${p.args.join(" ")}`}
+                  className="flex items-center gap-1.5 rounded-[var(--r-2)] border border-border bg-surface px-2.5 py-1.5 text-[12px] text-text-secondary transition-colors hover:border-border-hover hover:text-text disabled:opacity-50"
+                >
+                  <Plus size={11} className="text-text-disabled" />
+                  {quickBusy === p.name ? "Adding…" : p.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {load.state === "ready" && load.servers.length > 0 && (
           <ul className="flex flex-col gap-2">
             {load.servers.map((s) => (

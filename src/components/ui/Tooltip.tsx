@@ -21,7 +21,7 @@ export function Tooltip({
         <RT.Content
           side={side}
           sideOffset={6}
-          className="z-50 select-none rounded-[var(--r-2)] border border-border bg-overlay px-2 py-1 text-[12px] text-text shadow-none"
+          className="glass elev-1 z-50 select-none rounded-[var(--r-2)] border border-border px-2 py-1 text-[12px] text-text"
         >
           {content}
         </RT.Content>

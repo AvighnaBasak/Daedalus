@@ -93,7 +93,7 @@ export function CheckpointMenu({ session }: { session: Session }) {
         <Popover.Content
           align="end"
           sideOffset={6}
-          className="z-50 w-72 rounded-[var(--r-3)] border border-border-strong bg-overlay p-2 text-text shadow-none"
+          className="glass elev-2 z-50 w-72 rounded-[var(--r-3)] border border-border-strong p-2 text-text"
         >
           <div className="flex items-center justify-between px-1 pb-2">
             <span className="mono-label">Checkpoints</span>

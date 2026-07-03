@@ -29,8 +29,8 @@ export function CommandPalette({
       open={open}
       onOpenChange={onOpenChange}
       label="Command palette"
-      overlayClassName="fixed inset-0 z-50 bg-black/50"
-      contentClassName="fixed left-1/2 top-[12vh] z-50 w-full max-w-[560px] -translate-x-1/2 overflow-hidden rounded-[var(--r-3)] border border-border-strong bg-overlay"
+      overlayClassName="fixed inset-0 z-50 bg-black/40"
+      contentClassName="glass elev-2 fixed left-1/2 top-[12vh] z-50 w-full max-w-[560px] -translate-x-1/2 overflow-hidden rounded-[var(--r-3)] border border-border-strong"
     >
       <Command.Input
         placeholder="Search sessions, views, actions…"

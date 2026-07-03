@@ -21,6 +21,18 @@ const TEMPLATES: Template[] = [
   { id: "next", name: "Next.js", stack: "App Router · Tailwind", command: "npx", args: ["create-next-app@latest", "{name}", "--ts", "--tailwind", "--eslint", "--app", "--src-dir", "--use-npm", "--yes"] },
 ];
 
+const CUSTOM_KEY = "daedalus.templates.custom";
+function loadCustom(): Template[] {
+  try {
+    return JSON.parse(localStorage.getItem(CUSTOM_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+function saveCustom(list: Template[]) {
+  localStorage.setItem(CUSTOM_KEY, JSON.stringify(list));
+}
+
 function joinPath(parent: string, name: string): string {
   const sep = parent.includes("\\") ? "\\" : "/";
   return parent.replace(/[\\/]$/, "") + sep + name;
@@ -33,6 +45,30 @@ export function TemplatesView({ onScaffolded }: { onScaffolded: (session: Sessio
   const [busy, setBusy] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [custom, setCustom] = useState<Template[]>(() => loadCustom());
+  const [showSave, setShowSave] = useState(false);
+  const [cName, setCName] = useState("");
+  const [cCmd, setCCmd] = useState("");
+
+  const all = [...TEMPLATES, ...custom];
+
+  const saveStack = () => {
+    const parts = cCmd.trim().split(/\s+/);
+    if (!cName.trim() || parts.length === 0) return;
+    const t: Template = {
+      id: `custom-${Date.now().toString(36)}`,
+      name: cName.trim(),
+      stack: "Custom stack",
+      command: parts[0],
+      args: parts.slice(1),
+    };
+    const next = [...custom, t];
+    setCustom(next);
+    saveCustom(next);
+    setShowSave(false);
+    setCName("");
+    setCCmd("");
+  };
 
   const create = async () => {
     if (!selected || !parent || !name.trim() || busy) return;
@@ -63,7 +99,7 @@ export function TemplatesView({ onScaffolded }: { onScaffolded: (session: Sessio
         </p>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
-          {TEMPLATES.map((t) => (
+          {all.map((t) => (
             <button
               key={t.id}
               onClick={() => {
@@ -83,6 +119,36 @@ export function TemplatesView({ onScaffolded }: { onScaffolded: (session: Sessio
               </p>
             </button>
           ))}
+        </div>
+
+        {/* clone my stack */}
+        <div className="mt-4">
+          {showSave ? (
+            <div className="flex flex-col gap-2 rounded-[var(--r-2)] border border-border bg-surface-raised p-3">
+              <span className="mono-label !text-[10px]">Save your own stack</span>
+              <input
+                value={cName}
+                onChange={(e) => setCName(e.target.value)}
+                placeholder="Template name (e.g. My T3 stack)"
+                className="rounded-[var(--r-1)] border border-border bg-bg px-2 py-1.5 text-[12px] text-text outline-none placeholder:text-text-disabled focus:border-border-hover"
+              />
+              <input
+                value={cCmd}
+                onChange={(e) => setCCmd(e.target.value)}
+                placeholder="Command — use {name} for the project name, e.g. npx create-t3-app@latest {name} --CI"
+                spellCheck={false}
+                className="rounded-[var(--r-1)] border border-border bg-bg px-2 py-1.5 font-mono text-[11px] text-text outline-none placeholder:text-text-disabled focus:border-border-hover"
+              />
+              <div className="flex justify-end gap-2">
+                <Button size="sm" variant="ghost" onClick={() => setShowSave(false)}>Cancel</Button>
+                <Button size="sm" variant="solid" onClick={saveStack} disabled={!cName.trim() || !cCmd.trim()}>Save template</Button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setShowSave(true)} className="text-[12px] text-text-muted underline-offset-2 hover:text-text hover:underline">
+              + Clone my stack — save a custom scaffold command as a template
+            </button>
+          )}
         </div>
 
         {selected && (

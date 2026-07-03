@@ -6,6 +6,8 @@ import {
   MonitorSmartphone,
   LayoutTemplate,
   BarChart3,
+  Bot,
+  Lock,
   Settings,
   Palette,
 } from "lucide-react";
@@ -48,6 +50,12 @@ export function Rail({
         </RailItem>
         <RailItem active={overlay === "cost"} label="Cost history" onClick={() => onToggleOverlay("cost")}>
           <BarChart3 size={18} />
+        </RailItem>
+        <RailItem active={overlay === "subagents"} label="Sub-agents" onClick={() => onToggleOverlay("subagents")}>
+          <Bot size={18} />
+        </RailItem>
+        <RailItem active={overlay === "vault"} label="Secrets vault" onClick={() => onToggleOverlay("vault")}>
+          <Lock size={18} />
         </RailItem>
       </div>
       <div className="flex flex-col items-center gap-1">
