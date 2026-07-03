@@ -2,8 +2,13 @@ import { Minus, Square, X, Command, Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { StatusDot } from "@/components/ui/StatusDot";
 import { HudStrip } from "./HudStrip";
-import { minimizeWindow, toggleMaximizeWindow, closeWindow } from "@/lib/window";
+import { minimizeWindow, toggleMaximizeWindow, closeWindow, startDragging } from "@/lib/window";
 import mark from "@/assets/appicon.png";
+
+/** True when the event target is (or is inside) an interactive control. */
+function isInteractive(target: EventTarget | null): boolean {
+  return target instanceof Element && !!target.closest("button, input, textarea, select, a, [role='tab']");
+}
 import type { Session } from "@/lib/types";
 import type { HudStats } from "@/meter/useSessionStats";
 
@@ -26,11 +31,18 @@ export function TitleBar({
 }) {
   return (
     <div
-      data-tauri-drag-region
+      onMouseDown={(e) => {
+        // Programmatic drag: robust even when docks/skinning tools mess with
+        // native hit-testing. Skip interactive children and non-left buttons.
+        if (e.button === 0 && e.detail === 1 && !isInteractive(e.target)) void startDragging();
+      }}
+      onDoubleClick={(e) => {
+        if (!isInteractive(e.target)) void toggleMaximizeWindow();
+      }}
       className="flex h-10 shrink-0 items-center gap-1 border-b border-border bg-bg pl-3 pr-1"
     >
       {/* Brand mark */}
-      <div data-tauri-drag-region className="flex items-center gap-2 pr-2">
+      <div className="flex items-center gap-2 pr-2">
         <img src={mark} alt="" className="pointer-events-none h-[18px] w-[18px] rounded-[3px]" />
         <span className="mono-label !text-text-secondary">DAEDALUS</span>
       </div>
@@ -42,6 +54,7 @@ export function TitleBar({
           return (
             <div
               key={s.id}
+              role="tab"
               onClick={() => onSelect(s.id)}
               className={cn(
                 "group flex h-7 max-w-[200px] cursor-pointer items-center gap-2 rounded-[var(--r-2)] border px-2.5 text-[12px] transition-colors",

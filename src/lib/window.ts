@@ -19,3 +19,10 @@ export async function closeWindow() {
   if (!isTauri()) return;
   (await win()).close();
 }
+
+/** Programmatic drag — more reliable than data-tauri-drag-region when window
+ * skinning tools (docks/themes) intercept hit-testing. */
+export async function startDragging() {
+  if (!isTauri()) return;
+  (await win()).startDragging();
+}

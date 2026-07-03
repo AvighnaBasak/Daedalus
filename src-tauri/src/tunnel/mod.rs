@@ -25,10 +25,12 @@ pub async fn start_tunnel(
 ) -> Result<String, String> {
     kill_existing(&state);
 
-    let child = std::process::Command::new("ngrok")
-        .args(["http", &port.to_string(), "--log=stdout"])
+    let mut cmd = std::process::Command::new("ngrok");
+    cmd.args(["http", &port.to_string(), "--log=stdout"])
         .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+    crate::claude_binary::hide_console(&mut cmd);
+    let child = cmd
         .spawn()
         .map_err(|_| "ngrok isn't available. Install it and run `ngrok config add-authtoken <token>` once.".to_string())?;
 

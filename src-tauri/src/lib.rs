@@ -4,6 +4,7 @@
 pub mod checkpoint;
 pub mod claude_binary;
 pub mod commands;
+pub mod doctor;
 pub mod files;
 pub mod git;
 pub mod live_usage;

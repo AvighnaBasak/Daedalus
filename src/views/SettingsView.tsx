@@ -1,17 +1,22 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Loader2, Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ProviderEditor } from "@/components/ProviderEditor";
 import { invoke, isTauri } from "@/lib/tauri";
 import { getLeanContext, setLeanContext } from "@/lib/features";
 import type { Session } from "@/lib/types";
 
-interface ClaudeVersion {
-  is_installed?: boolean;
-  version?: string;
+interface ClaudeProbeResult {
+  installed: boolean;
+  version: string | null;
 }
 
 export function SettingsView({ session }: { session: Session | null }) {
-  const [version, setVersion] = useState<string>("checking…");
+  const [cli, setCli] = useState<{ state: "checking" | "installed" | "missing"; version?: string }>({
+    state: "checking",
+  });
+  const [cliBusy, setCliBusy] = useState<null | "install" | "uninstall">(null);
+  const [confirmUninstall, setConfirmUninstall] = useState(false);
   const [lean, setLean] = useState(false);
 
   useEffect(() => {
@@ -30,20 +35,40 @@ export function SettingsView({ session }: { session: Session | null }) {
     }
   };
 
-  useEffect(() => {
-    (async () => {
-      if (!isTauri()) {
-        setVersion("browser preview");
-        return;
-      }
-      try {
-        const res = await invoke<ClaudeVersion>("check_claude_version");
-        setVersion(res?.is_installed ? (res.version ?? "installed") : "not found");
-      } catch {
-        setVersion("not found");
-      }
-    })();
+  const recheck = useCallback(async () => {
+    if (!isTauri()) {
+      setCli({ state: "missing", version: undefined });
+      return;
+    }
+    setCli({ state: "checking" });
+    try {
+      const res = await invoke<ClaudeProbeResult>("probe_claude");
+      setCli(res.installed ? { state: "installed", version: res.version ?? undefined } : { state: "missing" });
+    } catch {
+      setCli({ state: "missing" });
+    }
   }, []);
+
+  useEffect(() => {
+    void recheck();
+  }, [recheck]);
+
+  const npm = async (action: "install" | "uninstall") => {
+    setCliBusy(action);
+    setConfirmUninstall(false);
+    try {
+      await invoke<string>("run_scaffold", {
+        command: "npm",
+        args: [action, "-g", "@anthropic-ai/claude-code"],
+        cwd: ".",
+      });
+    } catch {
+      /* surfaced by re-probe below */
+    } finally {
+      setCliBusy(null);
+      await recheck();
+    }
+  };
 
   return (
     <div className="h-full overflow-y-auto bg-bg">
@@ -52,7 +77,41 @@ export function SettingsView({ session }: { session: Session | null }) {
         <h1 className="mt-1 text-[22px] text-text-emphasis">Preferences</h1>
 
         <div className="mt-6 flex flex-col gap-3">
-          <Field label="Claude Code" value={version} />
+          <div className="flex items-center justify-between rounded-[var(--r-2)] border border-border bg-surface px-4 py-3">
+            <div>
+              <span className="text-[13px] text-text">Claude Code CLI</span>
+              <p className="mt-0.5 text-[12px] text-text-muted">
+                {cli.state === "checking" && "Checking…"}
+                {cli.state === "installed" && `Installed${cli.version ? ` · v${cli.version}` : ""}`}
+                {cli.state === "missing" && "Not found on this machine"}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {cli.state === "missing" && (
+                <Button size="sm" variant="solid" disabled={cliBusy !== null} onClick={() => npm("install")}>
+                  {cliBusy === "install" ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                  Install
+                </Button>
+              )}
+              {cli.state === "installed" &&
+                (confirmUninstall ? (
+                  <>
+                    <Button size="sm" variant="ghost" onClick={() => setConfirmUninstall(false)}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" variant="danger" disabled={cliBusy !== null} onClick={() => npm("uninstall")}>
+                      {cliBusy === "uninstall" ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                      Confirm uninstall
+                    </Button>
+                  </>
+                ) : (
+                  <Button size="sm" variant="outline" disabled={cliBusy !== null} onClick={() => setConfirmUninstall(true)}>
+                    <Trash2 size={13} />
+                    Uninstall
+                  </Button>
+                ))}
+            </div>
+          </div>
           <Field label="Daedalus" value="v0.1.0 · AGPL-3.0" />
         </div>
 

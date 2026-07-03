@@ -4,6 +4,7 @@
 mod checkpoint;
 mod claude_binary;
 mod commands;
+mod doctor;
 mod files;
 mod git;
 mod live_usage;
@@ -53,6 +54,7 @@ use commands::storage::{
 use commands::usage::{
     get_session_stats, get_usage_by_date_range, get_usage_details, get_usage_stats,
 };
+use doctor::probe_claude;
 use files::{
     get_lean_context, list_dir, read_text_file, set_lean_context, write_text_file,
 };
@@ -378,6 +380,8 @@ fn main() {
             get_provider,
             set_provider,
             list_provider_models,
+            // Reliable CLI detection (works in release builds)
+            probe_claude,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

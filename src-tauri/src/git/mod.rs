@@ -15,10 +15,10 @@ pub struct WorktreeInfo {
 
 /// Run a git command inside `dir`, returning trimmed stdout or the stderr as an error.
 fn git(dir: &str, args: &[&str]) -> Result<String, String> {
-    let out = Command::new("git")
-        .arg("-C")
-        .arg(dir)
-        .args(args)
+    let mut cmd = Command::new("git");
+    cmd.arg("-C").arg(dir).args(args);
+    crate::claude_binary::hide_console(&mut cmd);
+    let out = cmd
         .output()
         .map_err(|e| format!("git is not available: {e}"))?;
     if out.status.success() {
@@ -327,6 +327,8 @@ pub async fn generate_commit_message(app: tauri::AppHandle, cwd: String) -> Resu
     for (key, value) in crate::provider::current_env() {
         cmd.env(key, value);
     }
+    #[cfg(windows)]
+    cmd.creation_flags(0x0800_0000);
     cmd.stdin(std::process::Stdio::piped());
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
@@ -385,6 +387,8 @@ pub async fn run_scaffold(command: String, args: Vec<String>, cwd: String) -> Re
     };
 
     cmd.current_dir(&cwd);
+    #[cfg(windows)]
+    cmd.creation_flags(0x0800_0000);
     let out = cmd
         .output()
         .await

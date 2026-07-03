@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, FolderOpen, Loader2, TriangleAlert, Copy, Download, BookOpen } from "lucide-react";
+import { Check, FolderOpen, Loader2, TriangleAlert, Copy, Download, BookOpen, Minus, Square, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ProviderEditor } from "@/components/ProviderEditor";
 import { invoke, isTauri } from "@/lib/tauri";
+import { minimizeWindow, toggleMaximizeWindow, closeWindow, startDragging } from "@/lib/window";
 import logo from "@/assets/logo.png";
-import mark from "@/assets/appicon.png";
 
 const DOCS_URL = "https://docs.anthropic.com/en/docs/claude-code/setup";
 
@@ -17,10 +17,9 @@ async function openDocs() {
   await open(DOCS_URL);
 }
 
-interface ClaudeVersion {
-  is_installed?: boolean;
-  version?: string;
-  output?: string;
+interface ClaudeProbeResult {
+  installed: boolean;
+  version: string | null;
 }
 
 type Probe = { state: "checking" } | { state: "ok"; version?: string } | { state: "missing" };
@@ -45,8 +44,8 @@ export function Onboarding({
     }
     setProbe({ state: "checking" });
     try {
-      const res = await invoke<ClaudeVersion>("check_claude_version");
-      if (res?.is_installed) setProbe({ state: "ok", version: res.version });
+      const res = await invoke<ClaudeProbeResult>("probe_claude");
+      if (res?.installed) setProbe({ state: "ok", version: res.version ?? undefined });
       else setProbe({ state: "missing" });
     } catch {
       setProbe({ state: "missing" });
@@ -58,19 +57,39 @@ export function Onboarding({
   }, [recheck]);
 
   return (
-    <div className="flex h-screen w-screen items-center justify-center border border-accent bg-bg text-text">
-      <div className="elev-2 w-[560px] overflow-hidden rounded-[var(--r-3)] border border-border bg-surface">
-        <div className="border-b border-border px-7 pb-5 pt-6">
-          <div className="flex items-center gap-3">
-            <img src={mark} alt="" className="h-9 w-9 rounded-[var(--r-2)]" />
-            <img src={logo} alt="Daedalus" className="h-5 opacity-90" />
-          </div>
-          <h1 className="mt-4 text-[20px] text-text-emphasis">
+    <div
+      onMouseDown={(e) => {
+        const t = e.target;
+        const interactive =
+          t instanceof Element && !!t.closest("button, input, textarea, select, a, label");
+        if (e.button === 0 && !interactive) void startDragging();
+      }}
+      className="relative flex h-screen w-screen flex-col items-center justify-center gap-10 border border-accent bg-bg text-text"
+    >
+      {/* Window controls (the shell titlebar isn't mounted yet during onboarding) */}
+      <div className="absolute right-1 top-1 flex items-center">
+        <button onClick={minimizeWindow} aria-label="Minimize" className="flex h-8 w-10 items-center justify-center text-text-muted hover:bg-overlay hover:text-text">
+          <Minus size={14} />
+        </button>
+        <button onClick={toggleMaximizeWindow} aria-label="Maximize" className="flex h-8 w-10 items-center justify-center text-text-muted hover:bg-overlay hover:text-text">
+          <Square size={11} />
+        </button>
+        <button onClick={closeWindow} aria-label="Close" className="flex h-8 w-10 items-center justify-center text-text-muted hover:bg-accent hover:text-white">
+          <X size={14} />
+        </button>
+      </div>
+
+      {/* Brand — one logo, centered, given room to breathe */}
+      <img src={logo} alt="Daedalus" className="pointer-events-none h-12 opacity-95" />
+
+      <div className="elev-2 w-[640px] max-w-[92vw] overflow-hidden rounded-[var(--r-3)] border border-border bg-surface">
+        <div className="px-10 pb-6 pt-8 text-center">
+          <h1 className="text-[22px] text-text-emphasis">
             {step === 0 && "Let's check your setup"}
             {step === 1 && "How should Claude Code think?"}
             {step === 2 && "Open your first project"}
           </h1>
-          <p className="mt-1 text-[13px] text-text-muted">
+          <p className="mx-auto mt-2 max-w-[46ch] text-[13px] leading-relaxed text-text-muted">
             {step === 0 && "Daedalus runs the real Claude Code CLI. It must be installed first."}
             {step === 1 &&
               "Use your Claude subscription, a free local model via Ollama, or any API key — switchable later in Settings."}
@@ -78,11 +97,11 @@ export function Onboarding({
           </p>
         </div>
 
-        <div className="max-h-[52vh] overflow-y-auto px-7 py-5">
+        <div className="max-h-[48vh] overflow-y-auto px-10 pb-8">
           {step === 0 && <PreflightRow probe={probe} onInstalled={recheck} />}
           {step === 1 && <ProviderEditor onSaved={() => setStep(2)} />}
           {step === 2 && (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col items-center gap-3">
               <Button
                 variant={openedFolder ? "outline" : "solid"}
                 onClick={async () => {
@@ -102,7 +121,7 @@ export function Onboarding({
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-border px-7 py-4">
+        <div className="flex items-center justify-between border-t border-border px-10 py-5">
           <div className="flex items-center gap-3">
             {STEPS.map((label, i) => (
               <button
