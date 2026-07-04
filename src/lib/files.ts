@@ -18,6 +18,22 @@ export function writeTextFile(path: string, content: string): Promise<void> {
   return invoke<void>("write_text_file", { path, content });
 }
 
+export function createFile(path: string): Promise<void> {
+  return invoke<void>("create_file", { path });
+}
+
+export function createDir(path: string): Promise<void> {
+  return invoke<void>("create_dir", { path });
+}
+
+export function renamePath(from: string, to: string): Promise<void> {
+  return invoke<void>("rename_path", { from, to });
+}
+
+export function deletePath(path: string): Promise<void> {
+  return invoke<void>("delete_path", { path });
+}
+
 const EXT_LANG: Record<string, string> = {
   ts: "typescript", tsx: "typescript", js: "javascript", jsx: "javascript",
   mjs: "javascript", cjs: "javascript", json: "json", md: "markdown",

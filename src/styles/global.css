@@ -122,16 +122,13 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.55), 0 12px 32px rgba(0, 0, 0, 0.45);
   }
 
-  /* Liquid glass: translucent surface + backdrop blur, hairline kept crisp. */
+  /* Popover / overlay surfaces — solid matte fills (transparency reads as
+     visual noise over a busy terminal, per user feedback). */
   .glass {
-    background: color-mix(in srgb, var(--overlay) 72%, transparent);
-    backdrop-filter: blur(14px) saturate(1.1);
-    -webkit-backdrop-filter: blur(14px) saturate(1.1);
+    background: var(--overlay);
   }
   .glass-deep {
-    background: color-mix(in srgb, var(--bg) 62%, transparent);
-    backdrop-filter: blur(18px) saturate(1.05);
-    -webkit-backdrop-filter: blur(18px) saturate(1.05);
+    background: var(--bg);
   }
 
   /* Film grain overlay (SVG turbulence, static). */

@@ -56,14 +56,15 @@ use commands::usage::{
 };
 use doctor::probe_claude;
 use files::{
-    get_lean_context, list_dir, read_text_file, set_lean_context, write_text_file,
+    create_dir, create_file, delete_path, get_lean_context, list_dir, read_text_file,
+    rename_path, set_lean_context, write_text_file,
 };
 use git::{
     generate_commit_message, git_checkpoint, git_commit, git_create_worktree, git_current_branch,
     git_diff, git_is_repo, git_list_worktrees, git_log, git_remove_worktree, git_repo_root,
     git_rewind, git_show_head, git_status, run_scaffold, scan_secrets,
 };
-use live_usage::{get_cost_history, get_live_session_usage};
+use live_usage::{get_cost_history, get_live_session_usage, has_claude_history};
 use process::ProcessRegistryState;
 use provider::{get_provider, list_provider_models, set_provider};
 use pty::{pty_kill, pty_resize, pty_spawn, pty_write, PtyState};
@@ -338,10 +339,15 @@ fn main() {
             pty_kill,
             // Live token/cost meter
             get_live_session_usage,
+            has_claude_history,
             // Project file access (editor)
             list_dir,
             read_text_file,
             write_text_file,
+            create_file,
+            create_dir,
+            rename_path,
+            delete_path,
             // Git orchestration (worktrees, checkpoints, scaffolding)
             git_is_repo,
             git_repo_root,

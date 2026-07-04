@@ -178,6 +178,23 @@ fn accumulate_file(path: &std::path::Path) -> (f64, u64, Option<String>) {
     (cost, tokens, cwd)
 }
 
+/// Whether Claude Code has prior transcripts for this project — used to offer
+/// "resume last conversation" (`claude --continue`) when opening a folder.
+#[tauri::command]
+pub fn has_claude_history(cwd: String) -> bool {
+    let Some(home) = dirs::home_dir() else {
+        return false;
+    };
+    let dir = home.join(".claude").join("projects").join(encode_cwd(&cwd));
+    fs::read_dir(&dir)
+        .map(|entries| {
+            entries
+                .flatten()
+                .any(|e| e.path().extension().map(|x| x == "jsonl").unwrap_or(false))
+        })
+        .unwrap_or(false)
+}
+
 /// Aggregate token/cost usage per project across all of `~/.claude/projects`.
 #[tauri::command]
 pub fn get_cost_history() -> Result<Vec<ProjectCost>, String> {

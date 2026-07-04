@@ -3,7 +3,7 @@ import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { invoke, listen, isTauri } from "@/lib/tauri";
-import { daedalusXtermTheme } from "./xtermTheme";
+import { daedalusXtermTheme, TERMINAL_FONT } from "./xtermTheme";
 import { currentAccent, accentAlpha } from "@/lib/theme";
 import type { SessionStatus } from "@/lib/types";
 
@@ -33,15 +33,20 @@ const ATTENTION = /❯\s*1\.\s*Yes|\bDo you want to\b|\bWould you like to\b|Read
 export function Terminal({
   sessionId,
   cwd,
+  launchArgs,
   onStatus,
 }: {
   sessionId: string;
   cwd: string;
+  /** Extra flags for the claude CLI at spawn, e.g. ["--continue"] to resume. */
+  launchArgs?: string[];
   onStatus?: (status: SessionStatus) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const onStatusRef = useRef(onStatus);
   onStatusRef.current = onStatus;
+  // Spawn-time only — changing it later must not restart the pty.
+  const launchArgsRef = useRef(launchArgs);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -49,7 +54,8 @@ export function Terminal({
 
     const accent = currentAccent();
     const term = new XTerm({
-      fontFamily: 'var(--font-mono), "JetBrains Mono", Consolas, monospace',
+      // Must be concrete font names — xterm's canvas measurer can't resolve var().
+      fontFamily: TERMINAL_FONT,
       fontSize: 13,
       lineHeight: 1.2,
       cursorBlink: true,
@@ -126,7 +132,13 @@ export function Terminal({
 
         if (disposed) return;
         try {
-          await invoke("pty_spawn", { id: sessionId, cwd, cols: term.cols, rows: term.rows });
+          await invoke("pty_spawn", {
+            id: sessionId,
+            cwd,
+            cols: term.cols,
+            rows: term.rows,
+            args: launchArgsRef.current ?? null,
+          });
         } catch (err) {
           term.writeln(`\r\n\x1b[38;2;229;72;77m● ${String(err)}\x1b[0m`);
         }
@@ -151,5 +163,6 @@ export function Terminal({
     };
   }, [sessionId, cwd]);
 
-  return <div ref={hostRef} className="h-full w-full px-3 py-2" />;
+  // Extra bottom padding keeps the CLI's input line off the window edge.
+  return <div ref={hostRef} className="h-full w-full px-3 pb-5 pt-2" />;
 }

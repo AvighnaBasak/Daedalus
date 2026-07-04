@@ -55,6 +55,45 @@ pub fn write_text_file(path: String, content: String) -> Result<(), String> {
     fs::write(&path, content).map_err(|e| e.to_string())
 }
 
+/// Create an empty file (fails if it already exists — the tree offers rename instead).
+#[tauri::command]
+pub fn create_file(path: String) -> Result<(), String> {
+    let p = std::path::Path::new(&path);
+    if p.exists() {
+        return Err("A file with that name already exists.".into());
+    }
+    if let Some(parent) = p.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    fs::write(p, "").map_err(|e| e.to_string())
+}
+
+/// Create a directory (and any missing parents).
+#[tauri::command]
+pub fn create_dir(path: String) -> Result<(), String> {
+    fs::create_dir_all(&path).map_err(|e| e.to_string())
+}
+
+/// Rename / move a file or directory. Refuses to overwrite an existing target.
+#[tauri::command]
+pub fn rename_path(from: String, to: String) -> Result<(), String> {
+    if std::path::Path::new(&to).exists() {
+        return Err("Something with that name already exists.".into());
+    }
+    fs::rename(&from, &to).map_err(|e| e.to_string())
+}
+
+/// Delete a file or directory tree. The frontend confirms before calling this.
+#[tauri::command]
+pub fn delete_path(path: String) -> Result<(), String> {
+    let meta = fs::symlink_metadata(&path).map_err(|e| e.to_string())?;
+    if meta.is_dir() {
+        fs::remove_dir_all(&path).map_err(|e| e.to_string())
+    } else {
+        fs::remove_file(&path).map_err(|e| e.to_string())
+    }
+}
+
 /// Heavy directories Claude should not waste context reading.
 const LEAN_DENY: &[&str] = &[
     "Read(./node_modules/**)",

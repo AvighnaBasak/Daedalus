@@ -1,12 +1,12 @@
 import Editor, { type OnMount, type BeforeMount } from "@monaco-editor/react";
-import { daedalusNoir } from "./monacoTheme";
+import { daedalusNoir, EDITOR_FONT } from "./monacoTheme";
 // Monaco is heavy — this import lives here (not main.tsx) so the whole editor
 // bundle loads lazily, only when a Monaco surface first opens.
 import "./setupMonaco";
 
 /**
- * Monaco surface themed as daedalus-noir. Read-oriented for v1 (the terminal is
- * where Claude edits); the pane keeps the editor calm and greyscale.
+ * Monaco surface themed as daedalus-noir — full VS Code Dark+ syntax color,
+ * writable, with the same shortcuts you'd expect from VS Code's core editor.
  */
 export function MonacoPane({
   path,
@@ -39,7 +39,7 @@ export function MonacoPane({
       onMount={onMount}
       options={{
         readOnly,
-        fontFamily: 'var(--font-mono), "JetBrains Mono", Consolas, monospace',
+        fontFamily: EDITOR_FONT,
         fontSize: 13,
         lineHeight: 1.6,
         minimap: { enabled: false },

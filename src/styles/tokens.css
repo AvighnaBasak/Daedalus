@@ -56,8 +56,8 @@
 
   /* ---- typography ---- */
   --font-sans: "Geist", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "Geist Mono", "JetBrains Mono", "SFMono-Regular", Consolas,
-    "Liberation Mono", monospace;
+  --font-mono: "Cascadia Mono", "Geist Mono", "JetBrains Mono", "SFMono-Regular",
+    Consolas, "Liberation Mono", monospace;
 
   /* ---- motion ---- */
   --dur-fast: 120ms;

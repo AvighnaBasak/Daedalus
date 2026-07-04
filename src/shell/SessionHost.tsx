@@ -107,7 +107,12 @@ export function SessionHost({
       <div className="relative min-h-0 flex-1">
         {sessions.map((s) => (
           <div key={s.id} className={cn("absolute inset-0", s.id === activeId ? "" : "hidden")}>
-            <Terminal sessionId={s.id} cwd={s.cwd} onStatus={(st) => onStatus(s.id, st)} />
+            <Terminal
+              sessionId={s.id}
+              cwd={s.cwd}
+              launchArgs={s.launchArgs}
+              onStatus={(st) => onStatus(s.id, st)}
+            />
           </div>
         ))}
       </div>

@@ -59,6 +59,7 @@ pub fn pty_spawn(
     cwd: String,
     cols: u16,
     rows: u16,
+    args: Option<Vec<String>>,
 ) -> Result<(), String> {
     // Reuse opcode's Windows-aware binary discovery.
     let claude = crate::claude_binary::find_claude_binary(&app)?;
@@ -74,6 +75,12 @@ pub fn pty_spawn(
         .map_err(|e| format!("Failed to open pty: {e}"))?;
 
     let mut cmd = build_claude_command(&claude);
+    // Extra CLI flags, e.g. `--continue` to resume the last conversation in cwd.
+    if let Some(extra) = &args {
+        for a in extra {
+            cmd.arg(a);
+        }
+    }
     cmd.cwd(&cwd);
     // Inherit the full parent environment so `claude` can locate node, auth, etc.
     for (key, value) in std::env::vars() {

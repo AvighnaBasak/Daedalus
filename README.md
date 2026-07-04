@@ -49,11 +49,16 @@ struggle with agentic tool use — prefer 64k+ context coding models like `qwen3
 raw Google/OpenAI keys need a gateway like OpenRouter or LiteLLM.
 
 **Core cockpit**
-- **Live Claude Code terminal** — the real interactive TUI over a pty, with multi-session tabs that
-  all keep running in the background when you switch.
+- **Live Claude Code terminal** — the real interactive TUI over a pty, full ANSI color, with
+  multi-session tabs that all keep running in the background when you switch.
+- **Session resume** — opening a folder Claude has worked in before offers "resume last
+  conversation" (`claude --continue`); provider-change restarts also pick the conversation back up.
 - **Context & cost HUD** — token budget meter (grey → red as it fills) and a live `$` estimate,
   derived from `~/.claude/projects/**` transcripts.
-- **Files & Editor** — a project file tree with a Monaco editor; open, edit, and save (`Ctrl+S`).
+- **Files & Editor** — a VS Code-grade editing surface: file tree with colored file-type icons and
+  live git decorations (green `U`, amber `M`, red `D` — folders dot when dirty), right-click
+  new-file / new-folder / rename / delete, multi-tab Monaco with Dark+-style syntax color, dirty
+  dots, and `Ctrl+S` save.
 - **MCP Hub** — list configured MCP servers with health status, add new ones (stdio / SSE),
   and remove them, without hand-editing config.
 - **Device preview** — an in-app browser framed as Desktop / iPhone / Android, with a QR code.

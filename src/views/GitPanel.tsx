@@ -5,7 +5,7 @@ import {
   RefreshCw, Sparkles, GitCommitHorizontal, ShieldAlert, Loader2, GitBranch, FileDiff, History,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { daedalusNoir } from "@/editor/monacoTheme";
+import { daedalusNoir, EDITOR_FONT } from "@/editor/monacoTheme";
 import { languageForFile, readTextFile } from "@/lib/files";
 import {
   gitStatus, gitShowHead, gitLog, gitCommit, scanSecrets, generateCommitMessage,
@@ -20,8 +20,16 @@ function joinPath(cwd: string, rel: string): string {
   return cwd.replace(/[\\/]$/, "") + sep + rel;
 }
 
+// VS Code-style status letters + colors (U green, M amber, D red, A green, R blue).
 const STATUS_TAG: Record<string, string> = {
-  added: "A", modified: "M", deleted: "D", renamed: "R", untracked: "?",
+  added: "A", modified: "M", deleted: "D", renamed: "R", untracked: "U",
+};
+const STATUS_COLOR: Record<string, string> = {
+  added: "#73c991",
+  untracked: "#73c991",
+  modified: "#e2c08d",
+  deleted: "#f14c4c",
+  renamed: "#569cd6",
 };
 
 export function GitPanel({ session }: { session: Session | null }) {
@@ -171,10 +179,18 @@ function Changes({ session }: { session: Session }) {
                     selected?.path === f.path ? "bg-surface-raised text-text-emphasis" : "text-text-secondary hover:bg-overlay",
                   )}
                 >
-                  <span className={cn("w-3 text-center font-mono text-[10px]", f.status === "deleted" ? "text-accent" : "text-text-muted")}>
+                  <span
+                    className="w-3 text-center font-mono text-[10px] font-semibold"
+                    style={{ color: STATUS_COLOR[f.status] ?? "#e2c08d" }}
+                  >
                     {STATUS_TAG[f.status] ?? "M"}
                   </span>
-                  <span className="truncate">{f.path.split(/[\\/]/).pop()}</span>
+                  <span
+                    className={cn("truncate", f.status === "deleted" && "line-through opacity-70")}
+                    style={selected?.path === f.path ? undefined : { color: STATUS_COLOR[f.status] }}
+                  >
+                    {f.path.split(/[\\/]/).pop()}
+                  </span>
                 </button>
               ))
             )}
@@ -196,7 +212,7 @@ function Changes({ session }: { session: Session }) {
                 renderSideBySide: false,
                 minimap: { enabled: false },
                 fontSize: 12,
-                fontFamily: 'var(--font-mono), Consolas, monospace',
+                fontFamily: EDITOR_FONT,
                 scrollBeyondLastLine: false,
                 lineNumbers: "off",
               }}

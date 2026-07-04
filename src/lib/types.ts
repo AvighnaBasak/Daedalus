@@ -31,4 +31,6 @@ export interface Session {
   lastActivity?: number;
   /** backend this session's pty was spawned with (provider env is applied at spawn) */
   spawnedWith?: { kind: string; model: string; base_url: string };
+  /** extra claude CLI flags at spawn, e.g. ["--continue"] to resume the last conversation */
+  launchArgs?: string[];
 }

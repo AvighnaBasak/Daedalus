@@ -35,6 +35,9 @@ import { Onboarding } from "@/onboarding/Onboarding";
 import { pickProjectFolder, basename } from "@/lib/project";
 import { gitRepoRoot, gitCreateWorktree, gitRemoveWorktree } from "@/lib/git";
 import { getProvider } from "@/lib/provider";
+import { invoke, isTauri } from "@/lib/tauri";
+import { Button } from "@/components/ui/Button";
+import { History } from "lucide-react";
 import type { DockId, OverlayId, Session, SessionStatus } from "@/lib/types";
 import { useSessionStats } from "@/meter/useSessionStats";
 
@@ -58,6 +61,8 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [fx, setFx] = useState(() => loadTheme());
+  // Folder with prior Claude history — asks "resume or start fresh?".
+  const [resumePath, setResumePath] = useState<string | null>(null);
 
   const activeSession = sessions.find((s) => s.id === activeId) ?? null;
   const stats = useSessionStats(activeSession);
@@ -80,13 +85,23 @@ export default function App() {
     setActiveId(stamped.id);
   }, []);
 
-  // Kill the pty and respawn the same project on the current provider.
+  // Kill the pty and respawn the same project on the current provider,
+  // resuming the conversation it was in the middle of when possible.
   const restartSession = useCallback(
     async (id: string) => {
       const s = sessions.find((x) => x.id === id);
       if (!s) return;
       setSessions((prev) => prev.filter((x) => x.id !== id));
-      await addSession({ id: crypto.randomUUID(), title: s.title, cwd: s.cwd, worktree: s.worktree });
+      const canResume = isTauri()
+        ? await invoke<boolean>("has_claude_history", { cwd: s.cwd }).catch(() => false)
+        : false;
+      await addSession({
+        id: crypto.randomUUID(),
+        title: s.title,
+        cwd: s.cwd,
+        worktree: s.worktree,
+        launchArgs: canResume ? ["--continue"] : undefined,
+      });
     },
     [sessions, addSession],
   );
@@ -94,8 +109,29 @@ export default function App() {
   const newSession = useCallback(async () => {
     const path = await pickProjectFolder();
     if (!path) return;
+    // Prior conversation in this folder? Offer `claude --continue`.
+    const hasHistory = isTauri()
+      ? await invoke<boolean>("has_claude_history", { cwd: path }).catch(() => false)
+      : false;
+    if (hasHistory) {
+      setResumePath(path);
+      return;
+    }
     addSession({ id: crypto.randomUUID(), title: basename(path), cwd: path });
   }, [addSession]);
+
+  const startSession = useCallback(
+    (path: string, resume: boolean) => {
+      setResumePath(null);
+      addSession({
+        id: crypto.randomUUID(),
+        title: basename(path),
+        cwd: path,
+        launchArgs: resume ? ["--continue"] : undefined,
+      });
+    },
+    [addSession],
+  );
 
   // New session on an isolated git worktree so parallel agents never collide.
   const newIsolatedSession = useCallback(async () => {
@@ -303,6 +339,38 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Resume-or-fresh prompt when a picked folder has prior Claude history */}
+      {resumePath && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60">
+          <div className="elev-2 w-[420px] max-w-[90vw] rounded-[var(--r-3)] border border-border-strong bg-surface p-5">
+            <div className="flex items-center gap-2.5">
+              <History size={16} className="text-text-muted" />
+              <h2 className="text-[15px] text-text-emphasis">Previous session found</h2>
+            </div>
+            <p className="mt-2 text-[12px] leading-relaxed text-text-muted">
+              Claude has an earlier conversation in{" "}
+              <span className="font-mono text-text-secondary">{basename(resumePath)}</span>. Pick up
+              where you left off, or start clean?
+            </p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setResumePath(null)}
+                className="mr-auto text-[12px] text-text-disabled hover:text-text-muted"
+              >
+                Cancel
+              </button>
+              <Button variant="outline" onClick={() => startSession(resumePath, false)}>
+                Start fresh
+              </Button>
+              <Button variant="solid" onClick={() => startSession(resumePath, true)}>
+                <History size={13} />
+                Resume last conversation
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <CommandPalette
         open={paletteOpen}
