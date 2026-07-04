@@ -1,206 +1,221 @@
-# Daedalus
+<div align="center">
 
-> A power-user desktop cockpit for the **Claude Code CLI** — matte-black, non-Electron, token-aware.
+# **DAEDALUS**
 
-Daedalus is a lightweight native desktop shell built to *house* the real Claude Code CLI. It is
-**not** another chat wrapper: it runs the genuine interactive `claude` TUI in a real pseudo-terminal
-and wraps it in a fast, editorial, greyscale-and-red interface with a live token/cost meter, an MCP
-hub, a project file editor, and a device-frame web preview.
+**A super-house for Claude Code.**
 
-Claude Code itself stays untouched and is a required external dependency — Daedalus is the shell
-around it, not a replacement for it.
+A free, open-source, non-Electron desktop cockpit that houses the *real* interactive
+Claude Code CLI — and wraps it in everything a power user needs: a VS Code-grade editor,
+parallel isolated agents, git superpowers, live cost telemetry, device previews,
+an encrypted vault, and a bring-your-own-brain provider system. Zero API cost required.
+
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-red.svg)](LICENSE)
+![Platform](https://img.shields.io/badge/Platform-Windows--first-lightgrey)
+![Shell](https://img.shields.io/badge/Shell-Tauri%202%20(no%20Electron)-black)
+
+</div>
 
 ---
 
-## Why
+## Why Daedalus
 
-Existing Claude Code GUIs either reimplement the chat (losing the real TUI, plan mode, and
-permission prompts) or ship a heavyweight Electron app. Daedalus keeps the **real CLI** and makes
-it more powerful:
+- **The real `claude`, not a re-implementation.** The genuine interactive CLI runs over a true
+  pseudo-terminal (ConPTY on Windows). Every feature of the CLI — plan mode, permission prompts,
+  slash commands, hooks — works exactly as Anthropic ships it.
+- **Zero-cost by design.** Works with a Claude subscription (no API billing), a free local model
+  through Ollama, or any Anthropic-compatible API. Cost tracking reads Claude's own transcripts.
+- **Not Electron.** A Tauri 2 shell (Rust core + the OS WebView). ~19 MB executable,
+  ~7.5 MB installer, ~75 MB RAM, ~200 kB gzipped initial JS.
+- **Editorial matte-black design.** A strict greyscale ramp with a single red accent, hairline
+  borders, real depth — no gradients, no glow. The terminal and editor render in full color.
 
-- **Real `claude`, real terminal.** The interactive CLI runs over a true pty (ConPTY on Windows),
-  rendered with a themed xterm — plan mode, approvals, everything, exactly as in your terminal.
-- **Token & cost as a first-class feature.** A live meter reads Claude's own session transcripts
-  and shows context-window fill and a running dollar estimate.
-- **Non-Electron.** A Tauri 2 shell (Rust core + the OS webview) instead of bundling Chromium.
-- **Aesthetics matter.** A strict matte-black design system: a full greyscale ramp plus a single
-  red accent, no gradients, crisp hairlines.
+---
 
 ## Features
 
-**Bring your own brain — three ways to run it**
+### The terminal (core)
 
-Daedalus always drives the real Claude Code CLI, but *where it thinks* is your choice
-(picked in onboarding, switchable any time in Settings):
+- Real interactive **Claude Code TUI** over a native pty — raw bytes streamed to a truecolor
+  xterm.js front-end (full ANSI palette, Cascadia Mono, 10,000-line scrollback, clickable links).
+- **Multi-session tabs** — every session's terminal stays mounted and running when you switch
+  tabs, open panels, or use the board. Agents never pause in the background.
+- **Session resume** — opening a folder Claude has worked in before offers
+  *Resume last conversation* (`claude --continue`) or *Start fresh*.
+- **Live status detection** per session — *idle / working / needs-you* inferred from terminal
+  output; a red pulsing dot on the tab, a pulsing hairline over the terminal, and an optional
+  two-note chime when an agent hits a permission or plan prompt.
+- **Backend badge** (ANTHROPIC / OLLAMA / CUSTOM) showing what each session was spawned on, and a
+  **"Provider changed — restart to apply"** chip that respawns the session (resuming its
+  conversation) when you switch providers mid-flight.
+- **Model switcher** — `/model` from a menu: Opus / Sonnet / Haiku on subscription, or a live,
+  searchable catalog of every model your Ollama / API endpoint actually serves.
+- **Compact button** — one click runs `/compact` to summarize and prune context.
+- **Snippets** — per-project snippet library, pasted straight into the live CLI.
+- **Focus mode** (`Ctrl+Shift+F`) — hides everything but the terminal.
+- **Command palette** (`Ctrl+K`) — jump to any session, panel, or action.
+- **HUD strip** — live context-window meter (grey → red as it fills) and running `$` estimate in
+  the title bar, parsed from Claude Code's own transcript files.
 
-| Backend | Cost | How |
+### The editor (VS Code-grade)
+
+- **File tree** with colored file-type icons (TS, JS, JSON, HTML, CSS, Rust, Python, Go, images,
+  configs, and more) and folder tinting.
+- **Live git decorations** — VS Code-style letters and colors: `U` untracked (green), `M` modified
+  (amber), `A` added (green), `D` deleted (red, strikethrough), `R` renamed (blue), plus an amber
+  dot on any folder containing changes. Auto-refreshes every 5 seconds.
+- **File operations** — right-click context menu: New file, New folder, Rename, Delete
+  (two-step confirm); inline naming inputs right in the tree; toolbar buttons for quick creation.
+- **Multi-tab Monaco editor** — open as many files as you like; per-tab dirty dots; close
+  buttons; `Ctrl+S` to save; tabs auto-close when their file is deleted.
+- **Full Dark+-style syntax colors** on the matte-black ground, for ~30 languages, with
+  bracket-match highlighting, indent guides, find-match colors, and smooth cursor.
+- **Safety rails** — 2 MB size guard and binary-file detection before opening.
+- Monaco is **lazy-loaded** — the app boots instantly; the editor loads on first open.
+
+### Git superpowers
+
+- **Changes panel** — working-tree file list with VS Code status colors, and an inline Monaco
+  **diff viewer** (green insertions / red removals) for every file against HEAD.
+- **Commit from the app** — message box with an **AI-generated commit message** button
+  (pipes the diff through `claude -p` on your configured provider).
+- **Secret scan before every commit** — built-in gitleaks-style rules (AWS keys, GitHub / Slack /
+  Google tokens, private keys, generic API secrets) over the diff *and* untracked files, with an
+  explicit *Commit anyway* override.
+- **History graph** — commit timeline with merge markers, branch/tag badges, authors, and dates.
+- **Checkpoint & rewind** — one-click git-plumbing snapshot (tracked + untracked, no history
+  pollution, HEAD untouched) before a risky run; rewind restores the snapshot instantly.
+- **Isolated parallel agents** — start a session on its own **git worktree** (auto-created
+  branch) so several Claude agents work the same repo without collisions; worktrees live outside
+  your project and can be removed from the board.
+
+### Agent orchestration
+
+- **Agent board** — a live overview card per session: status dot, branch/worktree badge, context
+  %, cost, last activity; click to focus, spawn plain or isolated sessions, remove worktrees.
+- **Attention routing** — the moment any background agent needs a human decision, its tab and
+  board card flag red; click and answer in the real terminal.
+- **Headless sub-agents** — fork a scoped `claude -p` task (model selectable) with live output
+  streaming and a kill switch, without disturbing your main session.
+- **Template gallery** — scaffold a starter project (Vite React / Vue / Svelte, Next.js, …) and
+  auto-open a session inside it, with a prefilled kickoff prompt.
+
+### Bring your own brain (providers)
+
+| Provider | Cost | How |
 |---|---|---|
-| **Claude subscription** (default) | your plan | the CLI's normal Anthropic login |
-| **Ollama — local & free** | $0 | Ollama v0.14+ speaks the Anthropic API natively; Daedalus injects `ANTHROPIC_BASE_URL` |
-| **Any API key** | your provider's | any Anthropic-compatible endpoint (DeepSeek, GLM, Kimi, LM Studio, gateways…) |
+| **Claude subscription** (default) | Your existing plan, $0 API | The CLI's own login |
+| **Ollama** (local) | $0 | Native Anthropic-compatible API (Ollama ≥ 0.14) |
+| **Any Anthropic-compatible API** | Provider-priced | OpenRouter, DeepSeek, Moonshot, Z.AI GLM, LM Studio presets — or any base URL |
 
-The whole app adapts: cost tracking shows **$0 / untracked** for local & custom models, sub-agents
-follow the same backend, and the model switcher gains **live catalog search** — your installed
-Ollama models, or OpenRouter's full list filtered to tool-capable (Claude Code-usable) models
-(256 of 340 at the time of writing, including Gemini and GPT via OpenRouter). Sessions are stamped
-with the backend they started on; change providers and a one-click **"restart to apply"** chip
-appears. The UI tells you honestly when a feature depends on model quality (small local models can
-struggle with agentic tool use — prefer 64k+ context coding models like `qwen3-coder`), and that
-raw Google/OpenAI keys need a gateway like OpenRouter or LiteLLM.
+- Switch in onboarding or Settings; applies to new sessions (existing tabs get a restart chip).
+- **Live model catalogs** — Ollama models via `/api/tags`; OpenRouter filtered to
+  **tool-capable models only** (the ones that can actually drive Claude Code); generic
+  `/v1/models` probe for other gateways.
+- **Honest compatibility notes** — small models are flagged as weak for agentic use; raw
+  Google/OpenAI keys are called out as needing a gateway (different protocol).
+- **Cost adapts** — non-Claude models display $0; transcripts still track tokens.
 
-**Core cockpit**
-- **Live Claude Code terminal** — the real interactive TUI over a pty, full ANSI color, with
-  multi-session tabs that all keep running in the background when you switch.
-- **Session resume** — opening a folder Claude has worked in before offers "resume last
-  conversation" (`claude --continue`); provider-change restarts also pick the conversation back up.
-- **Context & cost HUD** — token budget meter (grey → red as it fills) and a live `$` estimate,
-  derived from `~/.claude/projects/**` transcripts.
-- **Files & Editor** — a VS Code-grade editing surface: file tree with colored file-type icons and
-  live git decorations (green `U`, amber `M`, red `D` — folders dot when dirty), right-click
-  new-file / new-folder / rename / delete, multi-tab Monaco with Dark+-style syntax color, dirty
-  dots, and `Ctrl+S` save.
-- **MCP Hub** — list configured MCP servers with health status, add new ones (stdio / SSE),
-  and remove them, without hand-editing config.
-- **Device preview** — an in-app browser framed as Desktop / iPhone / Android, with a QR code.
-- **Command palette** — `⌘/Ctrl+K` to jump between sessions and panels.
-- **Seamless onboarding** — first-run preflight checks for the `claude` CLI with plain-English fixes.
+### Preview & sharing
 
-**Agentic orchestration**
-- **Isolated parallel agents** — start a session on its own **git worktree** (new branch) so several
-  Claude agents can work at once without colliding on files.
-- **Agent board** — a live overview of every session: status (idle / working / needs-you), context %,
-  cost, and last activity; click to focus, or remove a worktree when done.
-- **Attention routing** — when an agent hits a permission/plan prompt, its tab and board card flag red
-  so you always know which one is waiting on you.
-- **Checkpoint & rewind** — one-click git snapshot before a risky run (`commit-tree`, no history
-  pollution) and instant rewind (`git restore`).
-- **Session compaction** — a button that runs `/compact` to prune context.
-- **Template gallery** — scaffold a starter (Vite React/Vue/Svelte, Next.js) and open a session in it.
+- **In-app browser** — Desktop, iPhone, and Android device frames; multi-tab; URL bar.
+- **Auto-reload on save** — a native file watcher refreshes the preview when Claude edits files.
+- **Public tunnel** — one click spins up ngrok and shows a **QR code** so any phone, anywhere,
+  can open your dev server.
+- **Recap cards** — export a shareable PNG of your session stats.
 
-**Git & diff visibility**
-- **Live diff viewer** — see exactly what Claude changed per file in a themed Monaco diff (additions
-  grey, removals red), plus a commit-graph **History** tab.
-- **AI commit messages** — generate a commit message from the working diff via the `claude` CLI
-  (runs on your subscription, no extra API cost).
-- **Secret-scan before commit** — a built-in gitleaks-style scanner flags likely keys/tokens in your
-  changes (and untracked files) before you commit.
+### Secrets & safety
 
-**Token efficiency**
-- **Model switcher** — one click to switch the live session between Opus / Sonnet / Haiku (`/model`).
-- **Cost history** — a cross-project leaderboard of tokens and `$` spent, from `~/.claude` transcripts.
-- **Lean context** — deny Claude read access to heavy dirs (node_modules, dist, target, lockfiles…)
-  via `.claude/settings.local.json`, so it stops wasting context on them.
+- **Encrypted vault** — per-project secrets stored **AES-256-GCM** encrypted outside the repo;
+  one click writes them to `.env` *and* ensures `.gitignore` covers it.
+- **Lean context** — a toggle that denies Claude read access to heavy directories
+  (`node_modules`, `dist`, `target`, lockfiles, …) via `.claude/settings.local.json`,
+  saving tokens on every session.
+- **Strict CSP** — the webview only talks to itself and your local dev servers.
 
-**Preview power**
-- **Public tunnel + QR** — expose the local dev server via ngrok and scan the QR from any network.
-- **Multi-tab preview** and **auto-reload on save** (a file watcher refreshes the in-app browser).
+### MCP hub
 
-**Secrets, env & QoL**
-- **Encrypted secrets vault** — per-project keys stored AES-256-GCM encrypted outside the repo;
-  materialize a git-ignored `.env` on demand. Raw keys never sit in Claude's context.
-- **Sub-agent spawner** — fork a headless `claude -p` (Haiku by default) for scoped tasks with
-  live streamed output, without polluting the main session.
-- **Focus mode** (`Ctrl+Shift+F`) — hide everything but the terminal.
-- **Snippets** — per-project clipboard/snippet history, pasted straight into the live CLI.
+- List configured MCP servers with health status, add stdio/SSE servers, remove them, and
+  quick-add popular ones — no hand-editing JSON.
 
-**Aesthetic & shareability**
-- **Custom themes** — pick or fine-tune the accent color and background tone; everything follows,
-  including the terminal cursor. Film grain and sound cues are toggleable.
-- **Attention cues** — a pulsing hairline (and optional two-note chime) when an agent needs you.
-- **Stats HUD + recap card** — lifetime projects/sessions/tokens/cost on the board, exportable as
-  a styled PNG for build-in-public posts.
+### Cost analytics
 
-Panels dock beside the always-present terminal (Editor on the left; MCP and Preview on the right)
-and close with `X` to return Claude to fullscreen — the session never restarts when you open a panel.
+- **Live meter** — context % and cost for the active session, straight from
+  `~/.claude/projects/**` transcripts (the same numbers Claude itself sees).
+- **Cost history** — a cross-project leaderboard of tokens and dollars over time.
+
+### Desktop experience
+
+- **Frameless matte-black window** with a thin red accent border, custom title bar (drag
+  anywhere, double-click to maximize), and native minimize / maximize / close.
+- **Custom themes** — pick or fine-tune the accent color and background tone in Settings;
+  optional film grain and sound; everything follows the design tokens.
+- **Onboarding** — detects the `claude` CLI (reliably, including in installed builds), offers a
+  guided `npm install -g @anthropic-ai/claude-code` with the official setup docs, then provider
+  choice, then your first project. No subscription? It tells you exactly how to run free.
+- **Settings** — install/uninstall the CLI, switch providers, toggle lean context, re-run
+  onboarding.
+- **Installers** — NSIS `.exe` and `.msi`, per-user (no admin), WebView2 bootstrapped
+  automatically; no console-window flashes anywhere.
+
+---
 
 ## Tech stack
 
-- **Shell:** [Tauri 2](https://tauri.app) (Rust + native WebView2)
-- **Frontend:** React 19 + Vite + TypeScript + Tailwind CSS v4
-- **Editor:** [Monaco](https://microsoft.github.io/monaco-editor/) · **Terminal:** [xterm.js](https://xtermjs.org)
-- **PTY:** [`portable-pty`](https://docs.rs/portable-pty/) · **Store:** SQLite (`rusqlite`)
+| Layer | Tech |
+|---|---|
+| Shell | [Tauri 2](https://tauri.app) — Rust core + WebView2 |
+| Frontend | React 19 · Vite · TypeScript · Tailwind CSS v4 |
+| Terminal | [xterm.js](https://xtermjs.org) over [`portable-pty`](https://docs.rs/portable-pty/) (ConPTY) |
+| Editor | [Monaco](https://microsoft.github.io/monaco-editor/) (lazy-loaded, locally bundled) |
+| Crypto | `aes-gcm` (AES-256-GCM) |
+| Store | SQLite (`rusqlite`) |
 
-Daedalus forks the session/process architecture of [opcode](https://github.com/winfunc/opcode)
-(AGPL-3.0), strips its headless chat UI, and rebuilds the feature/UI layer on top — running the real
-interactive CLI over a pty rather than driving Claude headlessly.
-
-## Prerequisites (Windows)
-
-- **[Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)** installed
-  (`npm i -g @anthropic-ai/claude-code`). A Claude subscription is optional — Ollama or any
-  Anthropic-compatible API key works too (configured in onboarding/Settings).
-- **Node.js** 20+ and **Rust** (stable, `x86_64-pc-windows-msvc`).
-- **Visual Studio Build Tools** with the **Desktop development with C++** workload (MSVC + Windows SDK):
-  ```powershell
-  winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--passive --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-  ```
-- **WebView2 runtime** (preinstalled on Windows 11; the installer bundles a bootstrapper otherwise).
-
-> Windows is the primary target for v1. macOS/Linux code paths exist but are not yet a focus.
+---
 
 ## Getting started
 
+### Prerequisites (Windows)
+
+1. **[Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)** — or let Daedalus's
+   onboarding install it for you (`npm install -g @anthropic-ai/claude-code`).
+2. **WebView2 runtime** — preinstalled on Windows 11; the installer bootstraps it otherwise.
+3. No Claude subscription? Pick **Ollama** or an **API key** during onboarding — total cost $0
+   with local models.
+
+### Install
+
+Run `Daedalus_x64-setup.exe` (NSIS) or the `.msi` — per-user, no admin required.
+
+### Build from source
+
 ```bash
+# Needs Node 20+, Rust (MSVC toolchain), and VS Build Tools C++ workload
 git clone https://github.com/AvighnaBasak/Daedalus.git
 cd Daedalus
 npm install
-npm run tauri dev      # launches the app (first Rust build takes a few minutes)
+npm run tauri dev      # develop
+npm run tauri build    # produce installers in src-tauri/target/release/bundle/
 ```
 
-Build an installer:
-
-```bash
-npm run tauri build    # branded NSIS (.exe) + MSI bundles on Windows
-```
-
-**Fast & light by design** — no Electron (native WebView2), a size-optimized LTO release build,
-and a lazily-loaded editor: Monaco's ~3 MB only loads the first time you open the Files or Git
-panel, so the cockpit starts on a ~200 kB (gzipped) bundle.
-
-## Project structure
-
-```
-Daedalus/
-├─ src/                  # React UI
-│  ├─ styles/tokens.css  # design system — the single source of truth
-│  ├─ shell/             # title bar, rail, docks
-│  ├─ terminal/          # xterm bound to the pty (the real claude TUI)
-│  ├─ editor/            # Monaco + file tree
-│  ├─ views/             # MCP hub, device preview, settings
-│  ├─ meter/             # token/cost hook
-│  └─ palette/           # ⌘K command palette
-├─ src-tauri/            # Rust core
-│  ├─ src/pty/           # interactive `claude` over portable-pty
-│  ├─ src/git/           # worktrees, checkpoint/rewind, scaffold runner
-│  ├─ src/live_usage/    # token/cost from ~/.claude/projects transcripts
-│  ├─ src/files/         # project file read/write for the editor
-│  └─ src/commands/      # sessions, MCP (from the opcode base)
-└─ DAEDALUS.md           # original design brief
-```
+---
 
 ## Design system
 
-Everything derives from `src/styles/tokens.css`. The rule: **the only chroma in the app is red;
-everything else is greyscale, and there are no gradients** — elevation comes from surface steps and
-1px hairlines. Base `#0A0A0A`, accent `#E5484D`.
+Single source of truth in `src/styles/tokens.css`: matte black `#0A0A0A`, a full greyscale ramp,
+and exactly one chromatic accent (red `#E5484D`, user-tunable). Elevation via surface steps and
+1 px hairlines + neutral shadows — never gradients, never glow. Code and terminal output are the
+one deliberate exception: they render in full color, because syntax should look like syntax.
 
-## Roadmap / consciously deferred
-
-- **Console/network capture in the preview** — needs a Playwright/CDP-driven browser (webview
-  iframes can't expose cross-origin consoles); planned as an opt-in later.
-- **Pin-a-tab screenshots into context** — same Playwright dependency as above.
-- **Session replay/GIF export** — recap cards ship today; full replay is a heavy add.
-- **Plan-mode step rail** — plan/permission prompts are detected and routed (red pulse); parsing
-  full plan text out of the TUI is too brittle to ship.
-- **Image generation / voice I/O** — intentionally out of scope to keep Daedalus zero-cost.
-- macOS polish.
+---
 
 ## License
 
-**AGPL-3.0** (inherited from the forked `opcode` base). The Claude Code CLI remains a separate
-external dependency owned by Anthropic and is not redistributed as part of this project.
+**AGPL-3.0.** Daedalus began as a hard fork of [opcode](https://github.com/winfunc/opcode)
+(AGPL-3.0) and inherits its license. The Claude Code CLI itself is a separate, external
+dependency owned by Anthropic.
 
 ## Credits
 
-Built on the shoulders of [opcode](https://github.com/winfunc/opcode), [Tauri](https://tauri.app),
-[Monaco Editor](https://microsoft.github.io/monaco-editor/), and [xterm.js](https://xtermjs.org).
+- [opcode](https://github.com/winfunc/opcode) — the AGPL fork base for the Tauri scaffolding.
+- [Anthropic](https://anthropic.com) — Claude Code.
+- Everyone building open tooling around agentic coding.

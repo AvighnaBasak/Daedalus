@@ -86,6 +86,13 @@ pub fn pty_spawn(
     for (key, value) in std::env::vars() {
         cmd.env(key, value);
     }
+    // A GUI-launched app inherits Explorer's env, which lacks any terminal
+    // identity — chalk/ink-based CLIs (incl. Claude Code) then detect zero
+    // color support and render monochrome. Advertise the truecolor xterm.js
+    // front-end the same way VS Code's integrated terminal does.
+    cmd.env("TERM", "xterm-256color");
+    cmd.env("COLORTERM", "truecolor");
+    cmd.env("FORCE_COLOR", "3");
     // Route the CLI at the configured provider (Ollama / custom Anthropic-compatible API).
     for (key, value) in crate::provider::current_env() {
         cmd.env(key, value);
