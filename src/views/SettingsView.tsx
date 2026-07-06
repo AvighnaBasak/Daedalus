@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Download, Trash2 } from "lucide-react";
+import { Loader2, Download, Trash2, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ProviderEditor } from "@/components/ProviderEditor";
 import { invoke, isTauri } from "@/lib/tauri";
-import { getLeanContext, setLeanContext } from "@/lib/features";
+import { getLeanContext, setLeanContext, installSkill, skillInstalled, bridgePort } from "@/lib/features";
 import type { Session } from "@/lib/types";
+
+const REOPEN_KEY = "daedalus.reopenLast";
 
 interface ClaudeProbeResult {
   installed: boolean;
@@ -18,6 +20,36 @@ export function SettingsView({ session }: { session: Session | null }) {
   const [cliBusy, setCliBusy] = useState<null | "install" | "uninstall">(null);
   const [confirmUninstall, setConfirmUninstall] = useState(false);
   const [lean, setLean] = useState(false);
+  const [reopen, setReopen] = useState(() => localStorage.getItem(REOPEN_KEY) !== "0");
+  const [skill, setSkill] = useState<{ installed: boolean; port: number } | null>(null);
+  const [skillBusy, setSkillBusy] = useState(false);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    void (async () => {
+      const [installed, port] = await Promise.all([
+        skillInstalled().catch(() => false),
+        bridgePort().catch(() => 0),
+      ]);
+      setSkill({ installed, port });
+    })();
+  }, []);
+
+  const toggleReopen = () => {
+    const next = !reopen;
+    setReopen(next);
+    localStorage.setItem(REOPEN_KEY, next ? "1" : "0");
+  };
+
+  const reinstallSkill = async () => {
+    setSkillBusy(true);
+    try {
+      await installSkill();
+      setSkill((s) => (s ? { ...s, installed: true } : s));
+    } finally {
+      setSkillBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (session && isTauri()) getLeanContext(session.cwd).then(setLean).catch(() => setLean(false));
@@ -151,6 +183,61 @@ export function SettingsView({ session }: { session: Session | null }) {
                 }
               />
             </button>
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <h2 className="mono-label mb-3">Startup</h2>
+          <div className="flex items-center justify-between rounded-[var(--r-2)] border border-border bg-surface px-4 py-3">
+            <div className="min-w-0 pr-4">
+              <p className="text-[13px] text-text">Reopen last project on launch</p>
+              <p className="mt-0.5 text-[12px] text-text-muted">
+                Opens your most recent project and resumes its conversation, like VS Code.
+              </p>
+            </div>
+            <button
+              onClick={toggleReopen}
+              aria-pressed={reopen}
+              className={
+                "relative h-5 w-9 shrink-0 rounded-full transition-colors " +
+                (reopen ? "bg-accent" : "bg-grey-600")
+              }
+            >
+              <span
+                className={
+                  "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all " +
+                  (reopen ? "left-[18px]" : "left-0.5")
+                }
+              />
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <h2 className="mono-label mb-3">Claude ↔ Daedalus integration</h2>
+          <div className="flex items-center justify-between rounded-[var(--r-2)] border border-border bg-surface px-4 py-3">
+            <div className="min-w-0 pr-4">
+              <p className="flex items-center gap-1.5 text-[13px] text-text">
+                <GraduationCap size={14} className="text-text-muted" />
+                Daedalus skill
+              </p>
+              <p className="mt-0.5 text-[12px] leading-relaxed text-text-muted">
+                Teaches Claude to drive this app — open previews, open files in the editor, notify
+                you. Installed to <span className="font-mono">~/.claude/skills/daedalus</span>
+                {skill && skill.port > 0 ? (
+                  <> · bridge on <span className="font-mono">127.0.0.1:{skill.port}</span></>
+                ) : null}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="text-[11px] text-text-muted">
+                {skill === null ? "…" : skill.installed ? "Installed" : "Not installed"}
+              </span>
+              <Button size="sm" variant="outline" disabled={skillBusy} onClick={reinstallSkill}>
+                {skillBusy ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                {skill?.installed ? "Reinstall" : "Install"}
+              </Button>
+            </div>
           </div>
         </div>
 

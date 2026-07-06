@@ -8,7 +8,15 @@ export type OverlayId =
   | "templates"
   | "cost"
   | "vault"
-  | "subagents";
+  | "subagents"
+  | "market";
+
+/** One tab in the bottom terminal panel — a real system shell over a pty. */
+export interface ShellTerm {
+  id: string;
+  title: string;
+  cwd: string;
+}
 
 /** Live activity of a session's agent, inferred from its pty output. */
 export type SessionStatus = "idle" | "working" | "attention";

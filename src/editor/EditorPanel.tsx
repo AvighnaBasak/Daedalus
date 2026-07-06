@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FileCode, Loader2, Save, X } from "lucide-react";
 import { FileTree } from "./FileTree";
 import { MonacoPane } from "./MonacoPane";
 import { readTextFile, writeTextFile, languageForFile, type DirEntry } from "@/lib/files";
+import { consumePendingOpenFile } from "@/lib/openFileBus";
 import { cn } from "@/lib/cn";
 import type { Session } from "@/lib/types";
 
@@ -25,33 +26,64 @@ export function EditorPanel({ session }: { session: Session | null }) {
 
   const active = files.find((f) => f.path === activePath) ?? null;
 
-  const openEntry = async (entry: DirEntry) => {
-    const existing = files.find((f) => f.path === entry.path);
-    if (existing) {
-      setActivePath(existing.path);
+  const filesRef = useRef(files);
+  filesRef.current = files;
+
+  const openEntry = useCallback(async (entry: DirEntry) => {
+    if (filesRef.current.some((f) => f.path === entry.path)) {
+      setActivePath(entry.path);
       return;
     }
     setLoading(true);
     setError(null);
     try {
       const content = await readTextFile(entry.path);
-      setFiles((prev) => [
-        ...prev,
-        {
-          path: entry.path,
-          name: entry.name,
-          language: languageForFile(entry.name),
-          value: content,
-          dirty: false,
-        },
-      ]);
+      setFiles((prev) => {
+        if (prev.some((f) => f.path === entry.path)) return prev;
+        return [
+          ...prev,
+          {
+            path: entry.path,
+            name: entry.name,
+            language: languageForFile(entry.name),
+            value: content,
+            dirty: false,
+          },
+        ];
+      });
       setActivePath(entry.path);
     } catch (e) {
       setError(String(e));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Files pushed from outside: Claude's bridge (`/open src/App.tsx`) and
+  // drag & drop onto the editor dock. Relative paths resolve against the project.
+  // A request raised while this lazy panel was still mounting waits in the bus.
+  const cwd = session?.cwd;
+  useEffect(() => {
+    if (!cwd) return;
+    const openPath = (raw: string) => {
+      let p = raw.trim();
+      if (!p) return;
+      p = p.replace(/:(\d+)(?::\d+)?$/, ""); // drop a trailing :line(:col)
+      const absolute = /^([A-Za-z]:[\\/]|\\\\|\/)/.test(p);
+      const sep = cwd.includes("\\") ? "\\" : "/";
+      const full = absolute ? p : cwd.replace(/[\\/]$/, "") + sep + p.replace(/^[.][\\/]/, "");
+      const name = full.split(/[\\/]/).pop() ?? full;
+      void openEntry({ name, path: full, is_dir: false });
+    };
+    const onOpen = (e: Event) => {
+      consumePendingOpenFile(); // handled live — clear the queued copy
+      openPath((e as CustomEvent<string>).detail ?? "");
+    };
+    window.addEventListener("daedalus:open-file", onOpen);
+    const pending = consumePendingOpenFile();
+    if (pending) openPath(pending);
+    return () => window.removeEventListener("daedalus:open-file", onOpen);
+  }, [cwd, openEntry]);
 
   const closeFile = useCallback((path: string) => {
     setFiles((prev) => {

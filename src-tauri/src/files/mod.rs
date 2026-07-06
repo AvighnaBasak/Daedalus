@@ -94,6 +94,12 @@ pub fn delete_path(path: String) -> Result<(), String> {
     }
 }
 
+/// Whether a path exists (used for reopen-last-project on launch).
+#[tauri::command]
+pub fn path_exists(path: String) -> bool {
+    std::path::Path::new(&path).exists()
+}
+
 /// Heavy directories Claude should not waste context reading.
 const LEAN_DENY: &[&str] = &[
     "Read(./node_modules/**)",

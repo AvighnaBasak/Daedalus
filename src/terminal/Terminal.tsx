@@ -25,32 +25,61 @@ function stripAnsi(s: string): string {
 // Signature of a permission / plan prompt waiting on the user.
 const ATTENTION = /❯\s*1\.\s*Yes|\bDo you want to\b|\bWould you like to\b|Ready to code\?/i;
 
+/** A URL served from this machine — the built-in preview can show it. */
+const LOCAL_URL = /^https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d{2,5})?/i;
+/** Dev-server announcements in CLI output ("Local: http://localhost:5173/", …). */
+const SERVER_URL = /https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d{2,5})(?:\/\S*)?/gi;
+
+/** 0.0.0.0 binds aren't navigable — rewrite to localhost. */
+function normalizeLocalUrl(url: string): string {
+  return url.replace(/\/\/0\.0\.0\.0(?=[:/]|$)/, "//localhost");
+}
+
+async function openExternal(url: string) {
+  if (isTauri()) {
+    try {
+      const { open } = await import("@tauri-apps/plugin-shell");
+      await open(url);
+      return;
+    } catch (e) {
+      console.error("openExternal failed:", e);
+    }
+  }
+  window.open(url, "_blank", "noopener");
+}
+
 /**
- * Renders one interactive `claude` session. Spawns a real pty on the Rust side
- * and wires it bidirectionally to xterm. `sessionId` must be stable per session.
- * `onStatus` reports live activity (idle / working / attention) for the board.
+ * Renders one interactive pty session — the `claude` CLI by default, or the
+ * system shell for the bottom terminal panel (`program="shell"`). Spawns a real
+ * pty on the Rust side and wires it bidirectionally to xterm. `sessionId` must
+ * be stable per session. `onStatus` reports live activity for the board.
  */
 export function Terminal({
   sessionId,
   cwd,
   launchArgs,
+  program,
   onStatus,
 }: {
   sessionId: string;
   cwd: string;
   /** Extra flags for the claude CLI at spawn, e.g. ["--continue"] to resume. */
   launchArgs?: string[];
+  /** What runs in the pty: the claude CLI (default) or the system shell. */
+  program?: "claude" | "shell";
   onStatus?: (status: SessionStatus) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const onStatusRef = useRef(onStatus);
   onStatusRef.current = onStatus;
-  // Spawn-time only — changing it later must not restart the pty.
+  // Spawn-time only — changing these later must not restart the pty.
   const launchArgsRef = useRef(launchArgs);
+  const programRef = useRef(program);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
+    const isShell = programRef.current === "shell";
 
     const accent = currentAccent();
     const term = new XTerm({
@@ -71,17 +100,29 @@ export function Terminal({
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
-    term.loadAddon(new WebLinksAddon());
+    // Local URLs open in the built-in preview panel; everything else goes to the browser.
+    term.loadAddon(
+      new WebLinksAddon((_event, uri) => {
+        if (LOCAL_URL.test(uri)) {
+          window.dispatchEvent(
+            new CustomEvent("daedalus:open-preview", { detail: normalizeLocalUrl(uri) }),
+          );
+        } else {
+          void openExternal(uri);
+        }
+      }),
+    );
     term.open(host);
 
     let disposed = false;
     const unlisteners: Array<() => void> = [];
 
-    // ---- status detection ----
+    // ---- status + dev-server detection ----
     const decoder = new TextDecoder();
     let recent = "";
     let lastStatus: SessionStatus = "idle";
     let idleTimer: ReturnType<typeof setTimeout> | undefined;
+    const announced = new Set<string>();
     const emit = (s: SessionStatus) => {
       if (s !== lastStatus) {
         lastStatus = s;
@@ -90,6 +131,19 @@ export function Terminal({
     };
     const onChunk = (bytes: Uint8Array) => {
       recent = (recent + stripAnsi(decoder.decode(bytes, { stream: true }))).slice(-3000);
+      // A dev server came up — surface it in the preview panel (once per origin).
+      for (const m of recent.matchAll(SERVER_URL)) {
+        try {
+          const url = normalizeLocalUrl(new URL(m[0]).origin);
+          if (!announced.has(url)) {
+            announced.add(url);
+            window.dispatchEvent(new CustomEvent("daedalus:server-detected", { detail: url }));
+          }
+        } catch {
+          /* mangled URL fragment — ignore */
+        }
+      }
+      if (isShell) return; // activity/attention tracking is for claude sessions
       if (ATTENTION.test(recent)) emit("attention");
       else emit("working");
       if (idleTimer) clearTimeout(idleTimer);
@@ -138,6 +192,7 @@ export function Terminal({
             cols: term.cols,
             rows: term.rows,
             args: launchArgsRef.current ?? null,
+            program: programRef.current ?? null,
           });
         } catch (err) {
           term.writeln(`\r\n\x1b[38;2;229;72;77m● ${String(err)}\x1b[0m`);

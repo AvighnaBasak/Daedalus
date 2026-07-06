@@ -1,6 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
 // Declare modules
+pub mod bridge;
 pub mod checkpoint;
 pub mod claude_binary;
 pub mod commands;
@@ -11,6 +12,7 @@ pub mod live_usage;
 pub mod process;
 pub mod provider;
 pub mod pty;
+pub mod skill;
 pub mod subagent;
 pub mod tunnel;
 pub mod vault;

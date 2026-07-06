@@ -1,4 +1,4 @@
-import { FolderOpen, TerminalSquare, GitBranch, Minimize2, Focus, RotateCw } from "lucide-react";
+import { FolderOpen, TerminalSquare, GitBranch, Minimize2, Focus, RotateCw, PanelBottom } from "lucide-react";
 import { Terminal } from "@/terminal/Terminal";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
@@ -22,6 +22,7 @@ export function SessionHost({
   onStatus,
   onToggleFocus,
   onRestart,
+  onToggleTerminal,
 }: {
   sessions: Session[];
   activeId: string | null;
@@ -29,6 +30,7 @@ export function SessionHost({
   onStatus: (id: string, status: SessionStatus) => void;
   onToggleFocus: () => void;
   onRestart: (id: string) => void;
+  onToggleTerminal: () => void;
 }) {
   const active = sessions.find((s) => s.id === activeId) ?? null;
   const provider = useProvider();
@@ -53,7 +55,7 @@ export function SessionHost({
   };
 
   return (
-    <div className="relative flex h-full flex-col bg-bg">
+    <div data-drop="claude" className="relative flex h-full flex-col bg-bg">
       {/* attention pulse: 1px hairline across the top when the agent needs you */}
       {active?.status === "attention" && (
         <div className="attention-hairline absolute inset-x-0 top-0 z-10 h-px" />
@@ -95,6 +97,11 @@ export function SessionHost({
               <Minimize2 size={13} />
               Compact
             </Button>
+          </Tooltip>
+          <Tooltip content="Terminal panel (Ctrl+`)" side="bottom">
+            <IconButton onClick={onToggleTerminal} aria-label="Toggle terminal panel">
+              <PanelBottom size={15} />
+            </IconButton>
           </Tooltip>
           <Tooltip content="Focus mode (Ctrl+Shift+F)" side="bottom">
             <IconButton onClick={onToggleFocus} aria-label="Focus mode">

@@ -49,20 +49,37 @@ fn build_claude_command(claude: &str) -> CommandBuilder {
     CommandBuilder::new(claude)
 }
 
-/// Spawn an interactive `claude` session in `cwd` at the given terminal size.
+/// The system shell for plain terminal-panel sessions.
+#[cfg(windows)]
+fn build_shell_command() -> CommandBuilder {
+    let mut cmd = CommandBuilder::new("powershell.exe");
+    cmd.arg("-NoLogo");
+    cmd
+}
+
+#[cfg(not(windows))]
+fn build_shell_command() -> CommandBuilder {
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".into());
+    CommandBuilder::new(shell)
+}
+
+/// Spawn an interactive pty session in `cwd` at the given terminal size.
+/// `program` picks what runs inside: `None`/`"claude"` for the Claude CLI,
+/// `"shell"` for the system shell (bottom terminal panel).
 /// Streams output to the `pty:output:{id}` event and signals `pty:exit:{id}` on close.
 #[tauri::command]
 pub fn pty_spawn(
     app: AppHandle,
     state: State<'_, PtyState>,
+    bridge: State<'_, crate::bridge::BridgeState>,
     id: String,
     cwd: String,
     cols: u16,
     rows: u16,
     args: Option<Vec<String>>,
+    program: Option<String>,
 ) -> Result<(), String> {
-    // Reuse opcode's Windows-aware binary discovery.
-    let claude = crate::claude_binary::find_claude_binary(&app)?;
+    let is_shell = program.as_deref() == Some("shell");
 
     let pty_system = native_pty_system();
     let pair = pty_system
@@ -74,11 +91,19 @@ pub fn pty_spawn(
         })
         .map_err(|e| format!("Failed to open pty: {e}"))?;
 
-    let mut cmd = build_claude_command(&claude);
+    let mut cmd = if is_shell {
+        build_shell_command()
+    } else {
+        // Reuse opcode's Windows-aware binary discovery.
+        let claude = crate::claude_binary::find_claude_binary(&app)?;
+        build_claude_command(&claude)
+    };
     // Extra CLI flags, e.g. `--continue` to resume the last conversation in cwd.
-    if let Some(extra) = &args {
-        for a in extra {
-            cmd.arg(a);
+    if !is_shell {
+        if let Some(extra) = &args {
+            for a in extra {
+                cmd.arg(a);
+            }
         }
     }
     cmd.cwd(&cwd);
@@ -93,9 +118,18 @@ pub fn pty_spawn(
     cmd.env("TERM", "xterm-256color");
     cmd.env("COLORTERM", "truecolor");
     cmd.env("FORCE_COLOR", "3");
-    // Route the CLI at the configured provider (Ollama / custom Anthropic-compatible API).
-    for (key, value) in crate::provider::current_env() {
-        cmd.env(key, value);
+    // Identify the house, and hand Claude the bridge that drives it (the
+    // auto-installed `daedalus` skill documents these endpoints).
+    cmd.env("DAEDALUS", "1");
+    cmd.env("DAEDALUS_VERSION", env!("CARGO_PKG_VERSION"));
+    if bridge.port != 0 {
+        cmd.env("DAEDALUS_BRIDGE", format!("http://127.0.0.1:{}", bridge.port));
+    }
+    if !is_shell {
+        // Route the CLI at the configured provider (Ollama / custom Anthropic-compatible API).
+        for (key, value) in crate::provider::current_env() {
+            cmd.env(key, value);
+        }
     }
 
     let child = pair

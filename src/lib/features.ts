@@ -36,3 +36,15 @@ export const vaultWriteEnv = (cwd: string) => invoke<string>("vault_write_env", 
 export const spawnSubagent = (id: string, cwd: string, prompt: string, model: string) =>
   invoke<void>("spawn_subagent", { id, cwd, prompt, model });
 export const killSubagent = (id: string) => invoke<void>("kill_subagent", { id });
+
+// v10 — Daedalus bridge, preview probing, startup
+export interface ProbeResult {
+  reachable: boolean;
+  frame_blocked: boolean;
+  status: number;
+}
+export const previewProbe = (url: string) => invoke<ProbeResult>("preview_probe", { url });
+export const bridgePort = () => invoke<number>("bridge_port");
+export const installSkill = () => invoke<boolean>("install_skill");
+export const skillInstalled = () => invoke<boolean>("skill_installed");
+export const pathExists = (path: string) => invoke<boolean>("path_exists", { path });

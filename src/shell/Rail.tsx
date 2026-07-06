@@ -10,6 +10,7 @@ import {
   Lock,
   Settings,
   Palette,
+  Store,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -45,6 +46,9 @@ export function Rail({
             <Icon size={18} />
           </RailItem>
         ))}
+        <RailItem active={overlay === "market"} label="Marketplace" onClick={() => onToggleOverlay("market")}>
+          <Store size={18} />
+        </RailItem>
         <RailItem active={overlay === "templates"} label="Templates" onClick={() => onToggleOverlay("templates")}>
           <LayoutTemplate size={18} />
         </RailItem>

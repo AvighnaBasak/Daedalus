@@ -6,8 +6,9 @@
 
 A free, open-source, non-Electron desktop cockpit that houses the *real* interactive
 Claude Code CLI — and wraps it in everything a power user needs: a VS Code-grade editor,
-parallel isolated agents, git superpowers, live cost telemetry, device previews,
-an encrypted vault, and a bring-your-own-brain provider system. Zero API cost required.
+parallel isolated agents, git superpowers, live cost telemetry, device previews, a real
+shell terminal panel, a curated marketplace, an encrypted vault, and a bring-your-own-brain
+provider system. Claude even learns to drive the app it lives in. Zero API cost required.
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-red.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/Platform-Windows--first-lightgrey)
@@ -28,6 +29,8 @@ an encrypted vault, and a bring-your-own-brain provider system. Zero API cost re
   ~7.5 MB installer, ~75 MB RAM, ~200 kB gzipped initial JS.
 - **Editorial matte-black design.** A strict greyscale ramp with a single red accent, hairline
   borders, real depth — no gradients, no glow. The terminal and editor render in full color.
+- **Claude knows its house.** A local bridge + an auto-installed skill teach the CLI to open the
+  built-in preview, open files in the editor, and notify you — no tokens wasted on busywork.
 
 ---
 
@@ -51,10 +54,37 @@ an encrypted vault, and a bring-your-own-brain provider system. Zero API cost re
   searchable catalog of every model your Ollama / API endpoint actually serves.
 - **Compact button** — one click runs `/compact` to summarize and prune context.
 - **Snippets** — per-project snippet library, pasted straight into the live CLI.
+- **Drag & drop** — drop any file (screenshots included) onto the terminal and its quoted path
+  is pasted into the prompt for Claude to read; drop onto the editor dock to open it there.
+- **Clickable links, routed smartly** — localhost URLs open in the built-in preview panel;
+  everything else opens in your browser.
 - **Focus mode** (`Ctrl+Shift+F`) — hides everything but the terminal.
 - **Command palette** (`Ctrl+K`) — jump to any session, panel, or action.
 - **HUD strip** — live context-window meter (grey → red as it fills) and running `$` estimate in
   the title bar, parsed from Claude Code's own transcript files.
+
+### The terminal panel (real shells)
+
+- **Bottom-docked shell terminals** (PowerShell on Windows) — `Ctrl+`` ` or `Ctrl+J` to toggle,
+  or the panel button in the session header. Start servers, kill processes, run anything —
+  without spending Claude tokens on it.
+- **Multiple tabs**, each opened in the active project's directory; every shell keeps running
+  while the panel is collapsed; drag the top edge to resize.
+- Same truecolor xterm rendering, fonts, and scrollback as the main terminal.
+
+### Claude drives the house (bridge + skill)
+
+- A **local HTTP bridge** (random port, 127.0.0.1 only) is handed to every session via
+  `DAEDALUS_BRIDGE`; a **skill is auto-installed** to `~/.claude/skills/daedalus` that teaches
+  Claude the endpoints and the house rules.
+- Claude can **open the preview** (`POST /preview` with a URL), **open files in the editor**
+  (`POST /open src/App.tsx`), **toast you** (`POST /notify`), and **pop the terminal panel**.
+- **Dev-server auto-detection** — even without the bridge, a `localhost` URL printed in any
+  terminal automatically opens the preview beside your session (once per URL, never nagging).
+- The skill also teaches token-saving habits: use the user's terminal panel instead of
+  babysitting servers, read dropped file paths directly, reference exact paths for the diff view.
+- Managed safely: the skill file is version-marked; a user-edited copy is never overwritten.
+  Reinstall any time from Settings.
 
 ### The editor (VS Code-grade)
 
@@ -117,7 +147,15 @@ an encrypted vault, and a bring-your-own-brain provider system. Zero API cost re
 
 ### Preview & sharing
 
-- **In-app browser** — Desktop, iPhone, and Android device frames; multi-tab; URL bar.
+- **In-app browser** — Desktop, iPhone, and Android device frames; multi-tab; URL bar; an
+  *Open in browser* escape hatch.
+- **Server-aware** — the iframe only mounts once the dev server actually answers; until then a
+  calm "waiting for localhost:3000…" state polls for it (no more WebView2 "content blocked"
+  error pages from a server that wasn't up yet).
+- **Honest about embedding** — sites that send `X-Frame-Options` / `frame-ancestors` get a clear
+  explanation and a one-click open-in-browser instead of a silent black box.
+- **Auto-opens** when a dev server appears in any terminal, when you click a localhost link, or
+  when Claude calls the bridge.
 - **Auto-reload on save** — a native file watcher refreshes the preview when Claude edits files.
 - **Public tunnel** — one click spins up ngrok and shows a **QR code** so any phone, anywhere,
   can open your dev server.
@@ -137,6 +175,17 @@ an encrypted vault, and a bring-your-own-brain provider system. Zero API cost re
 - List configured MCP servers with health status, add stdio/SSE servers, remove them, and
   quick-add popular ones — no hand-editing JSON.
 
+### The Bazaar (marketplace)
+
+- A **curated, offline catalog** of the Claude Code ecosystem — MCP servers, plugins & hooks,
+  agent/skill collections, and companion tools — searchable, with category filters.
+- **One-click installs**: MCP servers register through the same plumbing as the hub
+  (`filesystem`, `memory`, `github`, `playwright`, `context7`, `firecrawl`, `supabase`,
+  `notion`, `linear`, `stripe`, and more); plugin installs are typed straight into your live
+  Claude session; tool commands copy to the clipboard.
+- Hand-picked entries only (Dev Browser, CC Safety Net, ccusage, vibe-kanban, the awesome-lists…)
+  — shipped with the app, no telemetry, no remote calls.
+
 ### Cost analytics
 
 - **Live meter** — context % and cost for the active session, straight from
@@ -147,13 +196,16 @@ an encrypted vault, and a bring-your-own-brain provider system. Zero API cost re
 
 - **Frameless matte-black window** with a thin red accent border, custom title bar (drag
   anywhere, double-click to maximize), and native minimize / maximize / close.
+- **Reopens your last project on launch** (VS Code-style), resuming its conversation with
+  `claude --continue`; toggle it off in Settings → Startup.
+- **Toast notifications** — bridge pings and quick feedback surface bottom-right, matte and quiet.
 - **Custom themes** — pick or fine-tune the accent color and background tone in Settings;
   optional film grain and sound; everything follows the design tokens.
 - **Onboarding** — detects the `claude` CLI (reliably, including in installed builds), offers a
   guided `npm install -g @anthropic-ai/claude-code` with the official setup docs, then provider
   choice, then your first project. No subscription? It tells you exactly how to run free.
-- **Settings** — install/uninstall the CLI, switch providers, toggle lean context, re-run
-  onboarding.
+- **Settings** — install/uninstall the CLI, switch providers, toggle lean context, control
+  startup behavior, manage the Daedalus skill (with the bridge address shown), re-run onboarding.
 - **Installers** — NSIS `.exe` and `.msi`, per-user (no admin), WebView2 bootstrapped
   automatically; no console-window flashes anywhere.
 

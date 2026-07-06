@@ -1,5 +1,5 @@
 import { Command } from "cmdk";
-import { FolderOpen, Boxes, MonitorSmartphone, Settings, Palette, TerminalSquare, FileCode, GitCompare } from "lucide-react";
+import { FolderOpen, Boxes, MonitorSmartphone, Settings, Palette, TerminalSquare, FileCode, GitCompare, PanelBottom, Store } from "lucide-react";
 import type { DockId, OverlayId, Session } from "@/lib/types";
 
 export function CommandPalette({
@@ -10,6 +10,7 @@ export function CommandPalette({
   onNewSession,
   onOpenDock,
   onOpenOverlay,
+  onToggleTerminal,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -18,6 +19,7 @@ export function CommandPalette({
   onNewSession: () => void;
   onOpenDock: (d: DockId) => void;
   onOpenOverlay: (o: OverlayId) => void;
+  onToggleTerminal: () => void;
 }) {
   const run = (fn: () => void) => {
     onOpenChange(false);
@@ -45,6 +47,10 @@ export function CommandPalette({
           <Item onSelect={() => run(onNewSession)} icon={<FolderOpen size={15} />}>
             Open project folder…
           </Item>
+          <Item onSelect={() => run(onToggleTerminal)} icon={<PanelBottom size={15} />}>
+            Toggle terminal panel
+            <span className="ml-auto text-[11px] text-text-disabled">Ctrl+`</span>
+          </Item>
         </Command.Group>
 
         {sessions.length > 0 && (
@@ -67,6 +73,7 @@ export function CommandPalette({
           <Item onSelect={() => run(() => onOpenDock("git"))} icon={<GitCompare size={15} />}>Git · Diff & History</Item>
           <Item onSelect={() => run(() => onOpenDock("mcp"))} icon={<Boxes size={15} />}>MCP Hub</Item>
           <Item onSelect={() => run(() => onOpenDock("preview"))} icon={<MonitorSmartphone size={15} />}>Preview</Item>
+          <Item onSelect={() => run(() => onOpenOverlay("market"))} icon={<Store size={15} />}>Marketplace</Item>
           <Item onSelect={() => run(() => onOpenOverlay("theme"))} icon={<Palette size={15} />}>Theme preview</Item>
           <Item onSelect={() => run(() => onOpenOverlay("settings"))} icon={<Settings size={15} />}>Settings</Item>
         </Command.Group>

@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod bridge;
 mod checkpoint;
 mod claude_binary;
 mod commands;
@@ -11,6 +12,7 @@ mod live_usage;
 mod process;
 mod provider;
 mod pty;
+mod skill;
 mod subagent;
 mod tunnel;
 mod vault;
@@ -55,10 +57,12 @@ use commands::usage::{
     get_session_stats, get_usage_by_date_range, get_usage_details, get_usage_stats,
 };
 use doctor::probe_claude;
+use bridge::{bridge_port, preview_probe};
 use files::{
-    create_dir, create_file, delete_path, get_lean_context, list_dir, read_text_file,
-    rename_path, set_lean_context, write_text_file,
+    create_dir, create_file, delete_path, get_lean_context, list_dir, path_exists,
+    read_text_file, rename_path, set_lean_context, write_text_file,
 };
+use skill::{install_skill, skill_installed};
 use git::{
     generate_commit_message, git_checkpoint, git_commit, git_create_worktree, git_current_branch,
     git_diff, git_is_repo, git_list_worktrees, git_log, git_remove_worktree, git_repo_root,
@@ -189,6 +193,19 @@ fn main() {
 
             // Headless sub-agent registry
             app.manage(SubagentState::default());
+
+            // Daedalus bridge — lets the hosted Claude CLI drive the app
+            // (preview / editor / notifications) via a local HTTP endpoint.
+            let bridge_port = bridge::start(app.handle().clone());
+            app.manage(bridge::BridgeState { port: bridge_port });
+
+            // Teach Claude the house: install/upgrade the user-level skill that
+            // documents the bridge. Best-effort — never blocks startup.
+            match skill::install() {
+                Ok(true) => log::info!("daedalus skill installed/upgraded"),
+                Ok(false) => {}
+                Err(e) => log::warn!("daedalus skill install failed: {e}"),
+            }
 
             // Apply window vibrancy with rounded corners on macOS
             #[cfg(target_os = "macos")]
@@ -348,6 +365,12 @@ fn main() {
             create_dir,
             rename_path,
             delete_path,
+            path_exists,
+            // Daedalus bridge (Claude drives the app) + preview probing
+            bridge_port,
+            preview_probe,
+            install_skill,
+            skill_installed,
             // Git orchestration (worktrees, checkpoints, scaffolding)
             git_is_repo,
             git_repo_root,
